@@ -1,8 +1,10 @@
 # NJU-PETs++
 
 > 本项目为项目 NJU-PET 的升级版，故命名为 NJU-PETs++
-> 原项目链接：[蒲 今 / EL-project-NoDebug · GitLab](https://git.nju.edu.cn/Benzoic/el-project-nodebug)
-> 本项目为南京大学课程《人机交互系统》的课程项目，采用 Qt 进行开发
+>
+> 原项目链接：[BenzoicAcid / EL-project-NoDebug · GitLab](https://git.nju.edu.cn/Benzoic/el-project-nodebug)
+> 
+> 本项目为南京大学本科生课程《人机交互系统》的课程项目，采用 Qt6 进行开发
 
 ## 项目框架
 
