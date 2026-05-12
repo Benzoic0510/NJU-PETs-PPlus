@@ -1,0 +1,125 @@
+# ========================
+# Qt / CMake 构建产物
+# ========================
+build/
+build-*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Qt 自动生成文件
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.moc
+*.rcc
+
+# Qt Creator 项目文件
+*.creator
+*.creator.user
+*.config
+*.files
+*.includes
+*.cflags
+*.cxxflags
+
+# ========================
+# 编译输出
+# ========================
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.dSYM/
+
+# ========================
+# IDE / 编辑器
+# ========================
+
+# CLion
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+
+# ========================
+# 操作系统
+# ========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# ========================
+# 项目运行时数据
+# ========================
+
+# SQLite 数据库（运行时生成）
+*.db
+*.sqlite
+*.sqlite3
+
+# 用户配置（运行时生成）
+config.json
+user_config.json
+
+# 日志
+*.log
+logs/
+
+# ========================
+# 资源文件例外
+# （sprites/sounds/fonts 需要提交，但忽略临时导出文件）
+# ========================
+resources/sprites/tmp/
+resources/sounds/tmp/
+*.psd
+*.aseprite
+*.ase
