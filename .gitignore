@@ -123,3 +123,6 @@ resources/sounds/tmp/
 *.psd
 *.aseprite
 *.ase
+
+# Claude
+.claude/

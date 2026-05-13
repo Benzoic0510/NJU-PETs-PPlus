@@ -5,12 +5,34 @@
 #ifndef APPCONFIG_H
 #define APPCONFIG_H
 
-
+#include <QString>
 
 class AppConfig {
+public:
+    static AppConfig &instance();
 
+    void load();
+    void save();
+
+    QString petId() const;
+    void setPetId(const QString &id);
+
+    bool reminderEnabled() const;
+    void setReminderEnabled(bool on);
+
+    int volume() const;
+    void setVolume(int vol);
+
+private:
+    AppConfig() = default;
+    AppConfig(const AppConfig &) = delete;
+    AppConfig &operator=(const AppConfig &) = delete;
+
+    QString configPath() const;
+
+    QString m_petId = "nju-whale";
+    bool m_reminderEnabled = true;
+    int m_volume = 80;
 };
-
-
 
 #endif //APPCONFIG_H
