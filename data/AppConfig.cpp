@@ -30,6 +30,7 @@ void AppConfig::load() {
     m_petId            = obj.value("petId").toString("nju-whale");
     m_reminderEnabled  = obj.value("reminderEnabled").toBool(true);
     m_volume           = obj.value("volume").toInt(80);
+    m_apiKey           = obj.value("apiKey").toString();
 }
 
 void AppConfig::save() {
@@ -37,6 +38,7 @@ void AppConfig::save() {
     obj["petId"]            = m_petId;
     obj["reminderEnabled"]  = m_reminderEnabled;
     obj["volume"]           = m_volume;
+    obj["apiKey"]           = m_apiKey;
 
     QFile f(configPath());
     if (f.open(QIODevice::WriteOnly)) {
@@ -54,3 +56,6 @@ void AppConfig::setReminderEnabled(bool on)     { m_reminderEnabled = on; }
 
 int AppConfig::volume() const               { return m_volume; }
 void AppConfig::setVolume(int vol)           { m_volume = vol; }
+
+QString AppConfig::apiKey() const            { return m_apiKey; }
+void AppConfig::setApiKey(const QString &key) { m_apiKey = key; }

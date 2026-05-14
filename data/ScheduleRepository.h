@@ -15,9 +15,9 @@ public:
     bool        update(const Schedule &s);
     bool        remove(int id);
 
-    Schedule    getById(int id);
-    QVector<Schedule> getAll();
-    QVector<Schedule> getByDateRange(const QDateTime &from, const QDateTime &to);
+    Schedule    getById(int id) const;
+    QVector<Schedule> getAll() const;
+    QVector<Schedule> getByDateRange(const QDateTime &from, const QDateTime &to) const;
 };
 
 #endif //SCHEDULEREPOSITORY_H

@@ -23,6 +23,9 @@ public:
     int volume() const;
     void setVolume(int vol);
 
+    QString apiKey() const;
+    void setApiKey(const QString &key);
+
 private:
     AppConfig() = default;
     AppConfig(const AppConfig &) = delete;
@@ -33,6 +36,9 @@ private:
     QString m_petId = "nju-whale";
     bool m_reminderEnabled = true;
     int m_volume = 80;
+    QString m_apiKey;
 };
 
 #endif //APPCONFIG_H
+
+

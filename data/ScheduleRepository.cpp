@@ -62,7 +62,7 @@ bool ScheduleRepository::remove(int id) {
     return q.numRowsAffected() > 0;
 }
 
-Schedule ScheduleRepository::getById(int id) {
+Schedule ScheduleRepository::getById(int id) const {
     Schedule s;
     QSqlQuery q(DatabaseManager::instance().database());
     q.prepare("SELECT * FROM schedules WHERE id=:id");
@@ -79,7 +79,7 @@ Schedule ScheduleRepository::getById(int id) {
     return s;
 }
 
-QVector<Schedule> ScheduleRepository::getAll() {
+QVector<Schedule> ScheduleRepository::getAll() const {
     QVector<Schedule> results;
     QSqlQuery q(DatabaseManager::instance().database());
     q.exec("SELECT * FROM schedules ORDER BY startTime ASC");
@@ -97,7 +97,7 @@ QVector<Schedule> ScheduleRepository::getAll() {
     return results;
 }
 
-QVector<Schedule> ScheduleRepository::getByDateRange(const QDateTime &from, const QDateTime &to) {
+QVector<Schedule> ScheduleRepository::getByDateRange(const QDateTime &from, const QDateTime &to) const {
     QVector<Schedule> results;
     QSqlQuery q(DatabaseManager::instance().database());
     q.prepare(

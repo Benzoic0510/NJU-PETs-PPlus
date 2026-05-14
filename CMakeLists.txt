@@ -15,6 +15,7 @@ find_package(Qt6 REQUIRED COMPONENTS
         Widgets     # QWidget、QPainter、QMenu 等
         Sql         # QSqlDatabase、QSqlQuery 等
         Multimedia  # 音效播放（提醒音）
+        Network     # QNetworkAccessManager（NLPService）
 )
 
 # ========================
@@ -65,6 +66,7 @@ target_link_libraries(NJU-PETs++ PRIVATE
         Qt6::Widgets
         Qt6::Sql
         Qt6::Multimedia
+        Qt6::Network
 )
 
 # ========================

@@ -5,12 +5,34 @@
 #ifndef PETSTATEMANAGER_H
 #define PETSTATEMANAGER_H
 
+#include <QObject>
+#include <QString>
+#include <QTimer>
 
+class PetStateManager : public QObject {
+    Q_OBJECT
 
-class PetStateManager {
+public:
+    explicit PetStateManager(QObject *parent = nullptr);
 
+    QString currentState() const;
+
+public slots:
+    void onDragStarted();
+    void onDragEnded();
+    void onInteract();
+    void onRemind();
+    void onSleep();
+    void onWake();
+
+signals:
+    void stateChanged(const QString &state);
+
+private:
+    void setState(const QString &state);
+
+    QString m_state = "idle";
+    QTimer  m_returnTimer;
 };
-
-
 
 #endif //PETSTATEMANAGER_H
