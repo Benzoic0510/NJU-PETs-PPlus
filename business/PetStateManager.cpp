@@ -45,6 +45,12 @@ void PetStateManager::onWake() {
     setState("idle");
 }
 
+void PetStateManager::onManualState(const QString &state) {
+    m_returnTimer.stop();
+    setState(state);
+    if (state != "sleep") m_returnTimer.start(8000);
+}
+
 void PetStateManager::setState(const QString &state) {
     if (m_state == state) return;
     m_state = state;

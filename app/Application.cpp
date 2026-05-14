@@ -25,7 +25,33 @@ void Application::start() {
     connectSignals();
     m_reminderService.start();
 
-    // TODO: 实例化并显示 MainMenu、PetWidget（表现层实现后补充）
+    m_mainMenu = new MainMenu(&m_scheduleService);
+    m_mainMenu->show();
+
+    m_petWidget = new PetWidget;
+    m_petWidget->show();
+
+    // PetWidget ↔ PetStateManager
+    connect(m_petWidget, &PetWidget::dragStarted,        &m_petStateManager, &PetStateManager::onDragStarted);
+    connect(m_petWidget, &PetWidget::dragEnded,          &m_petStateManager, &PetStateManager::onDragEnded);
+    connect(m_petWidget, &PetWidget::interacted,         &m_petStateManager, &PetStateManager::onInteract);
+    connect(&m_petStateManager, &PetStateManager::stateChanged, m_petWidget, &PetWidget::onStateChanged);
+    connect(m_petWidget, &PetWidget::animationRequested, &m_petStateManager, &PetStateManager::onManualState);
+
+    // BubbleWidget
+    m_bubbleWidget = new BubbleWidget;
+    m_bubbleWidget->attachTo(m_petWidget);
+
+    connect(m_petWidget,    &PetWidget::nlpRequested,          m_bubbleWidget, &BubbleWidget::showInput);
+    connect(m_petWidget,    &PetWidget::interacted,             m_bubbleWidget, &BubbleWidget::dismiss);
+    connect(m_petWidget,    &PetWidget::dragStarted,            m_bubbleWidget, &BubbleWidget::dismiss);
+    connect(m_petWidget,    &PetWidget::interacted,             &m_nlpService,  &NLPService::clearHistory);
+    connect(m_petWidget,    &PetWidget::dragStarted,            &m_nlpService,  &NLPService::clearHistory);
+    connect(m_bubbleWidget, &BubbleWidget::submitted,           &m_nlpService,  &NLPService::parse);
+    connect(&m_nlpService,  &NLPService::parsed,                m_bubbleWidget, &BubbleWidget::showResponse);
+    connect(&m_nlpService,  &NLPService::parseFailed,           m_bubbleWidget, &BubbleWidget::showError);
+    connect(&m_nlpService,  &NLPService::clarificationNeeded,   m_bubbleWidget, &BubbleWidget::showClarification);
+    connect(&m_reminderService, &ReminderService::remind,       m_bubbleWidget, &BubbleWidget::showReminder);
 }
 
 void Application::connectSignals() {
@@ -41,13 +67,11 @@ void Application::connectSignals() {
                 m_nlpService.blockSignals(false);
             });
 
-    // TODO: 表现层信号槽（逐步补充）
-    // PetWidget::dragStarted  → PetStateManager::onDragStarted
-    // PetWidget::dragEnded    → PetStateManager::onDragEnded
-    // PetWidget::interacted   → PetStateManager::onInteract
+    // PetWidget ↔ PetStateManager（m_petWidget 在 start() 里创建后再连）
+    // 其余表现层信号槽在各组件创建后逐步补充：
     // PetWidget::nlpRequested → NLPService::parse
-    // PetStateManager::stateChanged → Animator::setState
+    // PetStateManager::stateChanged → PetWidget::onStateChanged
     // ReminderService::remind → BubbleWidget::showReminder
-    // ScheduleService::scheduleAdded/Updated/Removed → CalendarPanel::refresh
+    // ScheduleService signals → CalendarPanel::refresh
     // NLPService::parseFailed → BubbleWidget::showError
 }

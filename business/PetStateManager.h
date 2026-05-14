@@ -24,6 +24,7 @@ public slots:
     void onRemind();
     void onSleep();
     void onWake();
+    void onManualState(const QString &state);
 
 signals:
     void stateChanged(const QString &state);

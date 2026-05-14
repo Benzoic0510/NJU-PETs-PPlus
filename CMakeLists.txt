@@ -91,6 +91,7 @@ endif()
 # ========================
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
+
     file(GLOB_RECURSE ALL_SOURCE_FILES
             "app/*.cpp"          "app/*.h"
             "presentation/*.cpp" "presentation/*.h"

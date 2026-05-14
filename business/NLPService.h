@@ -7,6 +7,7 @@
 
 #include "data/models/Schedule.h"
 
+#include <QJsonArray>
 #include <QNetworkAccessManager>
 #include <QObject>
 #include <QString>
@@ -19,11 +20,14 @@ class NLPService : public QObject {
 public:
     explicit NLPService(QObject *parent = nullptr);
 
+public slots:
     void parse(const QString &text);
+    void clearHistory();
 
 signals:
     void parsed(const Schedule &s);
     void parseFailed(const QString &reason);
+    void clarificationNeeded(const QString &question);
 
 private slots:
     void onReply(QNetworkReply *reply);
@@ -32,6 +36,7 @@ private:
     QString resolveApiKey() const;
 
     QNetworkAccessManager m_nam;
+    QJsonArray            m_history;
 
     static constexpr const char *API_URL =
         "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";

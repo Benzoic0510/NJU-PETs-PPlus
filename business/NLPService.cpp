@@ -13,16 +13,21 @@
 #include <QNetworkRequest>
 
 static const QString SYSTEM_PROMPT_TEMPLATE = QStringLiteral(
-    "你是一个日程解析助手。将用户的自然语言描述解析为 JSON 格式的日程信息。\n"
-    "当前时间：%1\n\n"
-    "返回格式（只返回 JSON，不要有其他文字，不要用 markdown 代码块）：\n"
-    "{\n"
-    "  \"title\": \"日程标题\",\n"
-    "  \"startTime\": \"ISO 8601 格式，如 2026-05-14T15:00:00\",\n"
-    "  \"endTime\": \"ISO 8601 格式\",\n"
-    "  \"location\": \"地点，没有则为空字符串\",\n"
-    "  \"remindMins\": 15\n"
-    "}"
+    "你是一个日程记录助手，只负责帮用户添加日程。今天是 %1。\n\n"
+    "每次只返回一个 JSON 对象，不要有任何其他内容，不要使用 markdown 代码块。\n\n"
+    "规则：\n"
+    "1. 输入与记录日程无关（闲聊、问天气、提问等）→ 返回：\n"
+    "   {\"type\":\"irrelevant\",\"message\":\"我只能帮你记录日程哦~\"}\n\n"
+    "2. 想记日程但缺少开始时间或事件名称 → 返回：\n"
+    "   {\"type\":\"incomplete\",\"message\":\"（根据缺少的信息自然地提问，语气友好）\"}\n\n"
+    "3. 信息完整 → 返回：\n"
+    "   {\"type\":\"schedule\",\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
+    "\"endTime\":\"YYYY-MM-DDTHH:mm:ss\",\"location\":\"\",\"remindMins\":15}\n\n"
+    "补充说明：\n"
+    "- 缺少结束时间默认 +1 小时，无需追问\n"
+    "- 缺少地点 location 填空字符串，无需追问\n"
+    "- 缺少提醒 remindMins 填 15，无需追问\n"
+    "- 时间计算以今天 %1 为基准"
 );
 
 NLPService::NLPService(QObject *parent)
@@ -44,17 +49,18 @@ void NLPService::parse(const QString &text) {
         return;
     }
 
-    const QString systemPrompt = SYSTEM_PROMPT_TEMPLATE.arg(
-        QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm")
-    );
+    // 追加用户消息到历史
+    m_history.append(QJsonObject{{"role", "user"}, {"content", text}});
 
-    const QJsonObject body {
-        {"model", MODEL},
-        {"messages", QJsonArray {
-            QJsonObject {{"role", "system"}, {"content", systemPrompt}},
-            QJsonObject {{"role", "user"},   {"content", text}}
-        }}
-    };
+    const QString today = QDateTime::currentDateTime().toString("yyyy年MM月dd日");
+    const QString systemPrompt = SYSTEM_PROMPT_TEMPLATE.arg(today).arg(today);
+
+    QJsonArray messages;
+    messages.append(QJsonObject{{"role", "system"}, {"content", systemPrompt}});
+    for (const auto &v : std::as_const(m_history))
+        messages.append(v);
+
+    const QJsonObject body{{"model", MODEL}, {"messages", messages}};
 
     QNetworkRequest req{QUrl{QString(API_URL)}};
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
@@ -63,23 +69,30 @@ void NLPService::parse(const QString &text) {
     m_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
+void NLPService::clearHistory() {
+    m_history = QJsonArray();
+}
+
 void NLPService::onReply(QNetworkReply *reply) {
     reply->deleteLater();
 
     if (reply->error() != QNetworkReply::NoError) {
-        emit parseFailed(reply->errorString());
+        // 撤回刚才加入历史的用户消息，让用户可以重试
+        if (!m_history.isEmpty()) m_history.removeLast();
+        emit parseFailed("网络错误：" + reply->errorString());
         return;
     }
 
     const QByteArray raw = reply->readAll();
     const QJsonObject root = QJsonDocument::fromJson(raw).object();
 
-    // 提取 choices[0].message.content
     const QJsonArray choices = root.value("choices").toArray();
     if (choices.isEmpty()) {
-        emit parseFailed("API 返回格式异常：choices 为空");
+        if (!m_history.isEmpty()) m_history.removeLast();
+        emit parseFailed("API 返回格式异常");
         return;
     }
+
     QString content = choices[0].toObject()
                           .value("message").toObject()
                           .value("content").toString()
@@ -87,22 +100,40 @@ void NLPService::onReply(QNetworkReply *reply) {
 
     // 去掉可能的 markdown 代码块
     if (content.startsWith("```")) {
-        content = content.section('\n', 1);       // 去掉第一行 ```json
+        content = content.section('\n', 1);
         content = content.left(content.lastIndexOf("```")).trimmed();
     }
 
+    // 追加 AI 回复到历史
+    m_history.append(QJsonObject{{"role", "assistant"}, {"content", content}});
+
     const QJsonObject obj = QJsonDocument::fromJson(content.toUtf8()).object();
     if (obj.isEmpty()) {
-        emit parseFailed("无法解析模型返回的 JSON：" + content);
+        emit parseFailed("无法解析模型返回的内容，请重试");
         return;
     }
 
-    Schedule s;
-    s.title      = obj.value("title").toString();
-    s.startTime  = QDateTime::fromString(obj.value("startTime").toString(), Qt::ISODate);
-    s.endTime    = QDateTime::fromString(obj.value("endTime").toString(), Qt::ISODate);
-    s.location   = obj.value("location").toString();
-    s.remindMins = obj.value("remindMins").toInt(15);
+    const QString type = obj["type"].toString();
 
-    emit parsed(s);
+    if (type == "irrelevant") {
+        emit parseFailed(obj["message"].toString("我只能帮你记录日程哦~"));
+    } else if (type == "incomplete") {
+        emit clarificationNeeded(obj["message"].toString("请提供更多信息"));
+    } else if (type == "schedule") {
+        Schedule s;
+        s.title      = obj["title"].toString();
+        s.startTime  = QDateTime::fromString(obj["startTime"].toString(), Qt::ISODate);
+        s.endTime    = QDateTime::fromString(obj["endTime"].toString(), Qt::ISODate);
+        s.location   = obj["location"].toString();
+        s.remindMins = obj["remindMins"].toInt(15);
+
+        if (s.title.isEmpty() || !s.startTime.isValid()) {
+            emit parseFailed("日程信息解析失败，请重新描述");
+        } else {
+            m_history = QJsonArray();  // 成功后清空历史，下次是新对话
+            emit parsed(s);
+        }
+    } else {
+        emit parseFailed("模型返回了意外格式，请重试");
+    }
 }
