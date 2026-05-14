@@ -21,6 +21,9 @@ public:
 public slots:
     void refreshSchedules();
 
+signals:
+    void petSelected(const QString &petId);
+
 private:
     void     setupUi(ScheduleService *svc);
     QPushButton *makeNavBtn(const QString &text);

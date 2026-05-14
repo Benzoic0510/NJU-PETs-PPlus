@@ -4,6 +4,8 @@
 
 #include "presentation/mainmenu/MainMenu.h"
 #include "presentation/calendar/CalendarPanel.h"
+#include "presentation/selector/PetSelector.h"
+#include "presentation/settings/SettingsPanel.h"
 #include "presentation/common/Theme.h"
 
 #include <QHBoxLayout>
@@ -64,9 +66,11 @@ void MainMenu::setupUi(ScheduleService *svc) {
     m_stack = new QStackedWidget;
     m_stack->setStyleSheet("background:" + QString(Theme::BgPrimary) + ";");
 
-    m_stack->addWidget(makePlaceholder("宠物形象选择"));  // 0 启动
+    auto *selector = new PetSelector;
+    connect(selector, &PetSelector::petSelected, this, &MainMenu::petSelected);
+    m_stack->addWidget(selector);                        // 0 启动
     m_stack->addWidget(new CalendarPanel(svc));          // 1 日程
-    m_stack->addWidget(makePlaceholder("设置"));         // 2 设置
+    m_stack->addWidget(new SettingsPanel);               // 2 设置
     m_stack->addWidget(new QWidget);                     // 3 其他
 
     root->addWidget(m_stack, 1);

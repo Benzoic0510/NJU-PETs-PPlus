@@ -3,6 +3,7 @@
 //
 
 #include "business/ReminderService.h"
+#include "data/AppConfig.h"
 
 #include <QDateTime>
 
@@ -21,6 +22,7 @@ void ReminderService::stop() {
 }
 
 void ReminderService::scan() {
+    if (!AppConfig::instance().reminderEnabled()) return;
     const QDateTime now = QDateTime::currentDateTime();
     const auto schedules = m_repo.getAll();
 

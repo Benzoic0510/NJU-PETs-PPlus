@@ -242,10 +242,10 @@ void CalendarPanel::loadDay(const QDate &date) {
     const int wd = date.dayOfWeek() % 7;  // 0=Sun
     m_dateLabel->setText(
         QString("%1 年 %2 月 %3 日  周%4")
-            .arg(date.year())
-            .arg(date.month())
-            .arg(date.day())
-            .arg(WD[wd]));
+            .arg(QString::number(date.year()),
+                 QString::number(date.month()),
+                 QString::number(date.day()),
+                 WD[wd]));
 
     // 过滤当天日程
     const QDateTime from(date, QTime(0, 0));

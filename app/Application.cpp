@@ -31,6 +31,8 @@ void Application::start() {
     m_petWidget = new PetWidget;
     m_petWidget->show();
 
+    connect(m_mainMenu, &MainMenu::petSelected, m_petWidget, &PetWidget::loadPet);
+
     // PetWidget ↔ PetStateManager
     connect(m_petWidget, &PetWidget::dragStarted,        &m_petStateManager, &PetStateManager::onDragStarted);
     connect(m_petWidget, &PetWidget::dragEnded,          &m_petStateManager, &PetStateManager::onDragEnded);
@@ -48,7 +50,6 @@ void Application::start() {
     connect(m_petWidget,    &PetWidget::interacted,             &m_nlpService,  &NLPService::clearHistory);
     connect(m_petWidget,    &PetWidget::dragStarted,            &m_nlpService,  &NLPService::clearHistory);
     connect(m_bubbleWidget, &BubbleWidget::submitted,           &m_nlpService,  &NLPService::parse);
-    connect(&m_nlpService,  &NLPService::parsed,                m_bubbleWidget, &BubbleWidget::showResponse);
     connect(&m_nlpService,  &NLPService::parseFailed,           m_bubbleWidget, &BubbleWidget::showError);
     connect(&m_nlpService,  &NLPService::clarificationNeeded,   m_bubbleWidget, &BubbleWidget::showClarification);
     connect(&m_reminderService, &ReminderService::remind,       m_bubbleWidget, &BubbleWidget::showReminder);
@@ -59,12 +60,17 @@ void Application::connectSignals() {
     connect(&m_reminderService, &ReminderService::remind,
             &m_petStateManager,  &PetStateManager::onRemind);
 
-    // NLP 解析完成 → 自动添加日程
+    // NLP 解析完成 → 尝试添加日程，成功显示 showResponse，冲突显示 showError
     connect(&m_nlpService, &NLPService::parsed,
             this, [this](const Schedule &s) {
                 m_nlpService.blockSignals(true);
-                m_scheduleService.addSchedule(s);
+                const int id = m_scheduleService.addSchedule(s);
                 m_nlpService.blockSignals(false);
+                if (!m_bubbleWidget) return;
+                if (id < 0)
+                    m_bubbleWidget->showError("该时间段与已有日程冲突，请换个时间。");
+                else
+                    m_bubbleWidget->showResponse(s);
             });
 
     // PetWidget ↔ PetStateManager（m_petWidget 在 start() 里创建后再连）

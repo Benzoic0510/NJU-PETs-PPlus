@@ -87,7 +87,7 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
         p.drawText(
             QRect(0, y - 8, LabelW - 8, 16),
             Qt::AlignRight | Qt::AlignVCenter,
-            QString("%1:00").arg(h, 2, 10, QChar('0'))
+            QString::number(h).rightJustified(2, '0') + ":00"
         );
     }
 
@@ -95,6 +95,7 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
     QFont titleFont;
     titleFont.setPointSize(9);
     titleFont.setBold(true);
+    
     QFont metaFont;
     metaFont.setPointSize(8);
 
@@ -164,7 +165,7 @@ void TimelineView::setSchedules(const QDate &date, const QVector<Schedule> &sche
     m_canvas->setSchedules(schedules);
     if (date != m_lastDate) {
         m_lastDate = date;
-        const int y = m_canvas->yForHour(8);
+        const int y = m_canvas->yForHour(8) - 15;
         QTimer::singleShot(0, this, [this, y]() {
             verticalScrollBar()->setValue(y);
         });

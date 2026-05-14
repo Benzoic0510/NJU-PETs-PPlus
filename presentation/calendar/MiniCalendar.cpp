@@ -76,6 +76,7 @@ void MiniCalendar::nextMonth() {
     m_month = m_month.addMonths(1);
     repositionNav();
     update();
+
 }
 
 void MiniCalendar::repositionNav() {
@@ -84,7 +85,7 @@ void MiniCalendar::repositionNav() {
     m_nextBtn->move(w - 28, (NavH - 28) / 2);
     m_titleLabel->setGeometry(32, 0, w - 64, NavH);
     m_titleLabel->setText(
-        QString("%1 年 %2 月").arg(m_month.year()).arg(m_month.month()));
+        QString("%1 年 %2 月").arg(QString::number(m_month.year()), QString::number(m_month.month())));
 }
 
 void MiniCalendar::resizeEvent(QResizeEvent *e) {
