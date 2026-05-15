@@ -29,11 +29,15 @@ public slots:
 signals:
     void stateChanged(const QString &state);
 
+private slots:
+    void onIdleTick();
+
 private:
     void setState(const QString &state);
 
     QString m_state = "idle";
     QTimer  m_returnTimer;
+    QTimer  m_idleTimer;
 };
 
 #endif //PETSTATEMANAGER_H

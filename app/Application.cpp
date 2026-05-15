@@ -104,9 +104,11 @@ void Application::setupTrayIcon() {
 }
 
 void Application::connectSignals() {
-    // 提醒触发 → 宠物进入 interact 状态
+    // 提醒触发 → 宠物进入 interact 状态 + 系统提示音
     connect(&m_reminderService, &ReminderService::remind,
             &m_petStateManager,  &PetStateManager::onRemind);
+    connect(&m_reminderService, &ReminderService::remind,
+            this, [](const Schedule &) { QApplication::beep(); });
 
     // NLP 解析完成 → 尝试添加日程，成功显示 showResponse，冲突显示 showError
     connect(&m_nlpService, &NLPService::parsed,
