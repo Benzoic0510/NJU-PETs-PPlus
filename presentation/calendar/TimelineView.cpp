@@ -61,7 +61,7 @@ void TimelineCanvas::rebuildCards() {
             const int flagW = qMin(200, eventAreaW);
             int labelY = lineY - 12;
             for (int usedY : ddlLabelYs) {
-                if (qAbs(labelY - usedY) < 24) labelY = usedY + 24;
+                if (qAbs(labelY - usedY) < 24) labelY = usedY - 24;
             }
             ddlLabelYs.append(labelY);
             m_cards.append({
@@ -148,37 +148,27 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
         }
     }
 
-    // ── DDL 标注线（画在最上层）────────────────────────────
+    // ── DDL 标注线（先画所有虚线，再画所有旗帜标签，避免后者被前者覆盖）────────
+    QPen ddlPen(QColor(Theme::EventCoralBar), 1.5, Qt::DashLine);
+    for (const CardInfo &card : m_cards) {
+        const Schedule &s = m_schedules[card.scheduleIdx];
+        if (!s.isDDL) continue;
+        p.setPen(ddlPen);
+        p.drawLine(LabelW + 4, yForTime(s.startTime.time()), w, yForTime(s.startTime.time()));
+    }
+
     for (const CardInfo &card : m_cards) {
         const Schedule &s = m_schedules[card.scheduleIdx];
         if (!s.isDDL) continue;
 
-        const int lineY  = yForTime(s.startTime.time());
-        const int labelY = card.rect.center().y();
-
-        // 全宽珊瑚色虚线（固定在实际截止时刻）
-        QPen ddlPen(QColor(Theme::EventCoralBar), 1.5, Qt::DashLine);
-        p.setPen(ddlPen);
-        p.drawLine(LabelW + 4, lineY, w, lineY);
-
-        // 若标签被向下推，画竖向连接线衔接
-        if (labelY != lineY) {
-            p.setPen(QPen(QColor(Theme::EventCoralBar), 1, Qt::SolidLine));
-            const int connX = card.rect.right() - 6;
-            p.drawLine(connX, lineY, connX, labelY);
-        }
-
-        // 旗帜标签背景
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(Theme::EventCoralBg));
         p.drawRoundedRect(card.rect, 4, 4);
 
-        // 旗帜标签边框
         p.setPen(QPen(QColor(Theme::EventCoralBar), 1));
         p.setBrush(Qt::NoBrush);
         p.drawRoundedRect(card.rect, 4, 4);
 
-        // 旗帜标签文字
         p.setFont(titleFont);
         p.setPen(QColor(Theme::EventCoralFg));
         p.drawText(card.rect.adjusted(6, 0, -4, 0), Qt::AlignVCenter | Qt::AlignLeft,
