@@ -50,15 +50,22 @@ void TimelineCanvas::rebuildCards() {
     const int eventAreaW = width() - eventAreaX - 8;
     if (eventAreaW <= 0) return;
 
+    QVector<int> ddlLabelYs;
+
     for (int i = 0; i < m_schedules.size(); ++i) {
         const Schedule &s = m_schedules[i];
         const QTime st = s.startTime.time();
 
         if (s.isDDL) {
-            const int y      = yForTime(st);
-            const int flagW  = qMin(200, eventAreaW);
+            const int lineY = yForTime(st);
+            const int flagW = qMin(200, eventAreaW);
+            int labelY = lineY - 12;
+            for (int usedY : ddlLabelYs) {
+                if (qAbs(labelY - usedY) < 24) labelY = usedY + 24;
+            }
+            ddlLabelYs.append(labelY);
             m_cards.append({
-                QRect(eventAreaX + eventAreaW - flagW, y - 12, flagW, 24),
+                QRect(eventAreaX + eventAreaW - flagW, labelY, flagW, 24),
                 s.id,
                 2,   // coral
                 i
@@ -146,12 +153,20 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
         const Schedule &s = m_schedules[card.scheduleIdx];
         if (!s.isDDL) continue;
 
-        const int y = card.rect.center().y();
+        const int lineY  = yForTime(s.startTime.time());
+        const int labelY = card.rect.center().y();
 
-        // 全宽珊瑚色虚线
+        // 全宽珊瑚色虚线（固定在实际截止时刻）
         QPen ddlPen(QColor(Theme::EventCoralBar), 1.5, Qt::DashLine);
         p.setPen(ddlPen);
-        p.drawLine(LabelW + 4, y, w, y);
+        p.drawLine(LabelW + 4, lineY, w, lineY);
+
+        // 若标签被向下推，画竖向连接线衔接
+        if (labelY != lineY) {
+            p.setPen(QPen(QColor(Theme::EventCoralBar), 1, Qt::SolidLine));
+            const int connX = card.rect.right() - 6;
+            p.drawLine(connX, lineY, connX, labelY);
+        }
 
         // 旗帜标签背景
         p.setPen(Qt::NoPen);
