@@ -315,25 +315,25 @@ void CalendarPanel::updateUpcoming() {
         return a.startTime < b.startTime;
     });
 
-    // 分开收集，避免普通日程填满 4 格后 DDL 被跳过
+    // 普通日程取最近 6 条，DDL 取最近 7 天内 3 条，合并后按时间排序
     QVector<Schedule> upcoming;
+    int regularCount = 0, ddlCount = 0;
     for (const Schedule &s : all) {
         if (s.isDDL) {
+            if (ddlCount >= 3) continue;
             const int days = QDate::currentDate().daysTo(s.startTime.date());
-            if (days >= 0 && days <= 7) upcoming.append(s);
+            if (days >= 0 && days <= 7) { upcoming.append(s); ++ddlCount; }
         } else {
-            if (s.startTime >= now) upcoming.append(s);
+            if (regularCount >= 6) continue;
+            if (s.startTime >= now) { upcoming.append(s); ++regularCount; }
         }
     }
-    // 保持按 startTime 升序
     std::sort(upcoming.begin(), upcoming.end(), [](const Schedule &a, const Schedule &b){
         return a.startTime < b.startTime;
     });
 
     int count = 0;
     for (const Schedule &s : upcoming) {
-        if (count >= 4) break;
-
         auto *row = new QWidget(m_upcomingList);
         auto *rl  = new QHBoxLayout(row);
         rl->setContentsMargins(0, 5, 0, 5);
