@@ -14,6 +14,7 @@
 #include "presentation/pet/PetWidget.h"
 
 #include <QObject>
+#include <QSystemTrayIcon>
 
 class Application : public QObject {
     Q_OBJECT
@@ -28,15 +29,17 @@ private:
     Application &operator=(const Application &) = delete;
 
     void connectSignals();
+    void setupTrayIcon();
 
     ScheduleService m_scheduleService;
     ReminderService m_reminderService;
     NLPService      m_nlpService;
     PetStateManager m_petStateManager;
 
-    MainMenu     *m_mainMenu     = nullptr;
-    PetWidget    *m_petWidget    = nullptr;
-    BubbleWidget *m_bubbleWidget = nullptr;
+    MainMenu          *m_mainMenu     = nullptr;
+    PetWidget         *m_petWidget    = nullptr;
+    BubbleWidget      *m_bubbleWidget = nullptr;
+    QSystemTrayIcon   *m_trayIcon     = nullptr;
 };
 
 #endif //APPLICATION_H

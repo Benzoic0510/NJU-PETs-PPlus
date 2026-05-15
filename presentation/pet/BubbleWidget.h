@@ -19,6 +19,7 @@ public:
     explicit BubbleWidget(QWidget *parent = nullptr);
 
     void attachTo(QWidget *pet);
+    bool isInChat() const { return m_inChat; }
     void showInput();
     void showResponse(const Schedule &s);
     void showError(const QString &msg);

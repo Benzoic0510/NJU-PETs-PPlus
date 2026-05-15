@@ -5,6 +5,7 @@
 #ifndef MAINMENU_H
 #define MAINMENU_H
 
+#include "business/NLPService.h"
 #include "business/ScheduleService.h"
 
 #include <QButtonGroup>
@@ -16,7 +17,7 @@ class MainMenu : public QWidget {
     Q_OBJECT
 
 public:
-    explicit MainMenu(ScheduleService *svc, QWidget *parent = nullptr);
+    explicit MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr);
 
 public slots:
     void refreshSchedules();
@@ -25,7 +26,7 @@ signals:
     void petSelected(const QString &petId);
 
 private:
-    void     setupUi(ScheduleService *svc);
+    void     setupUi(ScheduleService *svc, NLPService *nlp);
     QPushButton *makeNavBtn(const QString &text);
     QWidget     *makePlaceholder(const QString &text);
 

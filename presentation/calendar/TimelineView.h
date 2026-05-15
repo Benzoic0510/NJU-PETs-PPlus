@@ -20,6 +20,7 @@ public:
     explicit TimelineCanvas(QWidget *parent = nullptr);
     void setSchedules(const QVector<Schedule> &schedules);
     int  yForHour(int h) const { return TopPad + (h - StartH) * SlotH; }
+    int  yForTime(const QTime &t) const;
 
 signals:
     void scheduleClicked(int id, QPoint globalPos);
@@ -37,7 +38,6 @@ private:
     };
 
     void rebuildCards();
-    int  yForTime(const QTime &t) const;
 
     QVector<Schedule> m_schedules;
     QVector<CardInfo> m_cards;
@@ -55,6 +55,7 @@ class TimelineView : public QScrollArea {
 public:
     explicit TimelineView(QWidget *parent = nullptr);
     void setSchedules(const QDate &date, const QVector<Schedule> &schedules);
+    void scrollToTime(const QTime &t);
 
 signals:
     void scheduleClicked(int id, QPoint globalPos);

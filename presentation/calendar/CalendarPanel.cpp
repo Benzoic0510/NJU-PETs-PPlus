@@ -6,7 +6,9 @@
 #include "presentation/common/Theme.h"
 
 #include <QComboBox>
+#include <QTime>
 #include <QDateTimeEdit>
+#include <QResizeEvent>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -103,19 +105,19 @@ static bool execScheduleDialog(Schedule &s, bool isEdit, QWidget *parent) {
 
 // ── CalendarPanel ─────────────────────────────────────────────────────────────
 
-CalendarPanel::CalendarPanel(ScheduleService *svc, QWidget *parent)
+CalendarPanel::CalendarPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent)
     : QWidget(parent)
     , m_svc(svc)
     , m_selDate(QDate::currentDate())
 {
-    setupUi();
+    setupUi(nlp);
 
     connect(svc, &ScheduleService::scheduleAdded,   this, [this](int){ refresh(); });
     connect(svc, &ScheduleService::scheduleUpdated, this, [this](int){ refresh(); });
     connect(svc, &ScheduleService::scheduleRemoved, this, [this](int){ refresh(); });
 }
 
-void CalendarPanel::setupUi() {
+void CalendarPanel::setupUi(NLPService *nlp) {
     auto *root = new QHBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
@@ -168,7 +170,8 @@ void CalendarPanel::setupUi() {
     // ══════════════════════════════════════════════════════════
     // 右面板
     // ══════════════════════════════════════════════════════════
-    auto *right = new QWidget;
+    m_rightPanel = new QWidget;
+    auto *right = m_rightPanel;
     auto *rightLayout = new QVBoxLayout(right);
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(0);
@@ -217,6 +220,10 @@ void CalendarPanel::setupUi() {
 
     root->addWidget(right, 1);
 
+    // 悬浮编辑面板（子控件，不在布局中，浮于时间轴上方）
+    m_editPanel = new ScheduleEditPanel(m_svc, nlp, m_rightPanel);
+    m_editPanel->hide();
+
     // 初始加载
     refresh();
 }
@@ -259,14 +266,24 @@ void CalendarPanel::onDateSelected(const QDate &date) {
 }
 
 void CalendarPanel::onAddClicked() {
-    Schedule s;
-    s.startTime = QDateTime(m_selDate, QTime(QTime::currentTime().hour() + 1, 0));
-    s.endTime   = s.startTime.addSecs(3600);
-
-    if (execScheduleDialog(s, false, this)) {
-        if (m_svc->addSchedule(s) < 0)
-            QMessageBox::warning(this, "时间冲突", "该时间段与已有日程冲突，请调整时间。");
+    if (m_editPanel->isVisible()) {
+        m_editPanel->hide();
+        return;
     }
+    repositionEditPanel();
+    m_editPanel->showForNew(m_selDate);
+}
+
+void CalendarPanel::repositionEditPanel() {
+    if (!m_editPanel || !m_rightPanel) return;
+    const int x = qMax(0, m_rightPanel->width() - m_editPanel->width() - 12);
+    m_editPanel->move(x, 49);  // 49 = header(48) + separator(1)
+}
+
+void CalendarPanel::resizeEvent(QResizeEvent *e) {
+    QWidget::resizeEvent(e);
+    if (m_editPanel && m_editPanel->isVisible())
+        repositionEditPanel();
 }
 
 void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
@@ -412,12 +429,12 @@ void CalendarPanel::updateUpcoming() {
 
         upLayout->addWidget(row);
 
-        // 点击跳转到该日期
+        // 点击跳转到该日期并滚动到对应时刻
         row->setCursor(Qt::PointingHandCursor);
         const QDate d = s.startTime.date();
-        QObject::connect(row, &QWidget::customContextMenuRequested, row, []{});  // dummy, use mousePressEvent override
-        // 用 event filter 或者直接点击：这里用 installEventFilter 最简单
-        // 为简单起见，暂时不处理点击，用户可通过日历导航
+        row->setProperty("navDate", d);
+        row->setProperty("navTime", s.startTime.time());
+        row->installEventFilter(this);
         ++count;
     }
 
@@ -427,4 +444,19 @@ void CalendarPanel::updateUpcoming() {
             "font-size: 12px; color: " + QString(Theme::TextTertiary) + ";");
         upLayout->addWidget(emptyLbl);
     }
+}
+
+bool CalendarPanel::eventFilter(QObject *watched, QEvent *event) {
+    if (event->type() == QEvent::MouseButtonPress) {
+        const QDate d = watched->property("navDate").toDate();
+        if (d.isValid()) {
+            loadDay(d);
+            // scrollToTime 排在 loadDay 内 singleShot(0) 之后入队，后执行覆盖默认滚动位置
+            const QTime t = watched->property("navTime").toTime();
+            if (t.isValid())
+                m_timeline->scrollToTime(t);
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }

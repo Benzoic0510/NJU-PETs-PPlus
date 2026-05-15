@@ -12,16 +12,16 @@
 #include <QLabel>
 #include <QVBoxLayout>
 
-MainMenu::MainMenu(ScheduleService *svc, QWidget *parent)
+MainMenu::MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent)
     : QWidget(parent)
 {
     setWindowTitle("NJU-PETs++");
     resize(Theme::WindowW, Theme::WindowH);
     setMinimumSize(720, 480);
-    setupUi(svc);
+    setupUi(svc, nlp);
 }
 
-void MainMenu::setupUi(ScheduleService *svc) {
+void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     auto *root = new QHBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
@@ -69,7 +69,7 @@ void MainMenu::setupUi(ScheduleService *svc) {
     auto *selector = new PetSelector;
     connect(selector, &PetSelector::petSelected, this, &MainMenu::petSelected);
     m_stack->addWidget(selector);                        // 0 启动
-    m_stack->addWidget(new CalendarPanel(svc));          // 1 日程
+    m_stack->addWidget(new CalendarPanel(svc, nlp));     // 1 日程
     m_stack->addWidget(new SettingsPanel);               // 2 设置
     m_stack->addWidget(new QWidget);                     // 3 其他
 

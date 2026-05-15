@@ -22,10 +22,12 @@ PetWidget::PetWidget(QWidget *parent)
     connect(&m_animator, &Animator::frameChanged, this, QOverload<>::of(&QWidget::update));
     m_animator.load(m_petId, "idle");
 
-    // 主菜单：日程 / 动作
+    // 主菜单：日程 / 动作 / 面板 / 退出
     connect(&m_mainMenu, &RadialMenu::triggered, this, [this](int idx) {
-        if (idx == 0) emit nlpRequested();
-        else          showActionMenu(m_lastRightClick);
+        if      (idx == 0) emit nlpRequested();
+        else if (idx == 1) showActionMenu(m_lastRightClick);
+        else if (idx == 2) emit showMainMenuRequested();
+        else if (idx == 3) emit quitRequested();
     });
 
     // 动作子菜单
@@ -47,7 +49,7 @@ void PetWidget::onStateChanged(const QString &state) {
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
     m_lastRightClick = center;
-    m_mainMenu.popup(center, {{"日程"}, {"动作"}});
+    m_mainMenu.popup(center, {{"日程"}, {"动作"}, {"面板"}, {"退出"}});
 }
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {

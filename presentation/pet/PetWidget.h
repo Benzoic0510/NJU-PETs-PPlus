@@ -24,6 +24,8 @@ signals:
     void interacted();
     void nlpRequested();
     void animationRequested(const QString &state);
+    void showMainMenuRequested();
+    void quitRequested();
 
 public slots:
     void onStateChanged(const QString &state);

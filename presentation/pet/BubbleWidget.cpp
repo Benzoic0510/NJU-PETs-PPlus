@@ -77,6 +77,7 @@ void BubbleWidget::showLoading() {
 }
 
 void BubbleWidget::showResponse(const Schedule &s) {
+    if (!m_inChat) return;
     m_loading->hide();
     m_edit->setEnabled(true);
     m_edit->clear();
@@ -93,6 +94,7 @@ void BubbleWidget::showResponse(const Schedule &s) {
 }
 
 void BubbleWidget::showError(const QString &msg) {
+    if (!m_inChat) return;
     // 非日程输入：显示提示，保留输入框（含上次文字）供重试
     m_loading->hide();
     m_output->setText(msg);
@@ -105,6 +107,7 @@ void BubbleWidget::showError(const QString &msg) {
 }
 
 void BubbleWidget::showClarification(const QString &msg) {
+    if (!m_inChat) return;
     // AI 追问：显示问题，清空输入框供用户补充信息
     m_loading->hide();
     m_output->setText(msg);

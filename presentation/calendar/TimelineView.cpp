@@ -161,6 +161,13 @@ TimelineView::TimelineView(QWidget *parent)
             this,     &TimelineView::scheduleClicked);
 }
 
+void TimelineView::scrollToTime(const QTime &t) {
+    const int y = qMax(0, m_canvas->yForTime(t) - 15);
+    QTimer::singleShot(0, this, [this, y]() {
+        verticalScrollBar()->setValue(y);
+    });
+}
+
 void TimelineView::setSchedules(const QDate &date, const QVector<Schedule> &schedules) {
     m_canvas->setSchedules(schedules);
     if (date != m_lastDate) {
