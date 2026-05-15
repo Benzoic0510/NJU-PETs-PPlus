@@ -9,8 +9,10 @@
 #include "business/ScheduleService.h"
 #include "data/models/Schedule.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDateTimeEdit>
+#include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -35,6 +37,7 @@ protected:
 private slots:
     void onParse();
     void onConfirm();
+    void onDDLToggled(bool on);
     void onNlpParsed(const Schedule &s);
     void onNlpFailed(const QString &reason);
     void onNlpClarification(const QString &question);
@@ -54,6 +57,8 @@ private:
     int            m_editingId      = -1;   // -1 = new, >=0 = editing
     Schedule       m_currentSchedule;       // valid only when m_editingId >= 0
 
+    QFormLayout   *m_form      = nullptr;
+    QCheckBox     *m_isDDLCheck = nullptr;
     QLineEdit     *m_titleEdit = nullptr;
     QDateTimeEdit *m_startEdit = nullptr;
     QDateTimeEdit *m_endEdit   = nullptr;

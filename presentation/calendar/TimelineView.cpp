@@ -53,18 +53,28 @@ void TimelineCanvas::rebuildCards() {
     for (int i = 0; i < m_schedules.size(); ++i) {
         const Schedule &s = m_schedules[i];
         const QTime st = s.startTime.time();
-        const QTime et = s.endTime.time();
 
-        int y = yForTime(st);
-        int h = yForTime(et) - y;
-        if (h < 24) h = 24;  // 最小高度
-
-        m_cards.append({
-            QRect(eventAreaX, y, eventAreaW, h),
-            s.id,
-            i % 4,
-            i
-        });
+        if (s.isDDL) {
+            const int y      = yForTime(st);
+            const int flagW  = qMin(200, eventAreaW);
+            m_cards.append({
+                QRect(eventAreaX + eventAreaW - flagW, y - 12, flagW, 24),
+                s.id,
+                2,   // coral
+                i
+            });
+        } else {
+            const QTime et = s.endTime.time();
+            int y = yForTime(st);
+            int h = yForTime(et) - y;
+            if (h < 24) h = 24;
+            m_cards.append({
+                QRect(eventAreaX, y, eventAreaW, h),
+                s.id,
+                i % 4,
+                i
+            });
+        }
     }
 }
 
@@ -91,37 +101,35 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
         );
     }
 
-    // ── 事件卡片 ──────────────────────────────────────────
+    // ── 字体 ─────────────────────────────────────────────
     QFont titleFont;
     titleFont.setPointSize(9);
     titleFont.setBold(true);
-    
+
     QFont metaFont;
     metaFont.setPointSize(8);
 
+    // ── 普通事件卡片 ──────────────────────────────────────
     for (const CardInfo &card : m_cards) {
-        const Schedule &s   = m_schedules[card.scheduleIdx];
+        const Schedule &s = m_schedules[card.scheduleIdx];
+        if (s.isDDL) continue;
+
         const EventColor &c = EVENT_COLORS[card.colorIdx];
 
-        // 卡片背景
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(c.bg));
         p.drawRoundedRect(card.rect.adjusted(0, 1, 0, -1), 6, 6);
 
-        // 左侧彩色竖条
         p.setBrush(QColor(c.bar));
         p.drawRoundedRect(QRect(card.rect.left(), card.rect.top() + 1, 3, card.rect.height() - 2), 2, 2);
 
-        // 文字区域
         const QRect textRect = card.rect.adjusted(10, 6, -6, -4);
 
-        // 标题
         p.setFont(titleFont);
         p.setPen(QColor(c.fg));
-        const QString title = p.fontMetrics().elidedText(s.title, Qt::ElideRight, textRect.width());
-        p.drawText(textRect, Qt::AlignLeft | Qt::AlignTop, title);
+        p.drawText(textRect, Qt::AlignLeft | Qt::AlignTop,
+                   p.fontMetrics().elidedText(s.title, Qt::ElideRight, textRect.width()));
 
-        // 元信息（时间 · 地点）
         if (card.rect.height() >= 40) {
             p.setFont(metaFont);
             p.setPen(QColor(c.bar));
@@ -132,12 +140,48 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
                        p.fontMetrics().elidedText(meta, Qt::ElideRight, metaRect.width()));
         }
     }
+
+    // ── DDL 标注线（画在最上层）────────────────────────────
+    for (const CardInfo &card : m_cards) {
+        const Schedule &s = m_schedules[card.scheduleIdx];
+        if (!s.isDDL) continue;
+
+        const int y = card.rect.center().y();
+
+        // 全宽珊瑚色虚线
+        QPen ddlPen(QColor(Theme::EventCoralBar), 1.5, Qt::DashLine);
+        p.setPen(ddlPen);
+        p.drawLine(LabelW + 4, y, w, y);
+
+        // 旗帜标签背景
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(Theme::EventCoralBg));
+        p.drawRoundedRect(card.rect, 4, 4);
+
+        // 旗帜标签边框
+        p.setPen(QPen(QColor(Theme::EventCoralBar), 1));
+        p.setBrush(Qt::NoBrush);
+        p.drawRoundedRect(card.rect, 4, 4);
+
+        // 旗帜标签文字
+        p.setFont(titleFont);
+        p.setPen(QColor(Theme::EventCoralFg));
+        p.drawText(card.rect.adjusted(6, 0, -4, 0), Qt::AlignVCenter | Qt::AlignLeft,
+                   p.fontMetrics().elidedText("⚑ " + s.title, Qt::ElideRight, card.rect.width() - 10));
+    }
 }
 
 void TimelineCanvas::mousePressEvent(QMouseEvent *event) {
     const QPoint pos = event->position().toPoint();
+    // DDL 渲染在最上层，优先命中
     for (const CardInfo &card : m_cards) {
-        if (card.rect.contains(pos)) {
+        if (m_schedules[card.scheduleIdx].isDDL && card.rect.contains(pos)) {
+            emit scheduleClicked(card.scheduleId, mapToGlobal(pos));
+            return;
+        }
+    }
+    for (const CardInfo &card : m_cards) {
+        if (!m_schedules[card.scheduleIdx].isDDL && card.rect.contains(pos)) {
             emit scheduleClicked(card.scheduleId, mapToGlobal(pos));
             return;
         }

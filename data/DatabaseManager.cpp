@@ -54,6 +54,9 @@ bool DatabaseManager::init() {
         return false;
     }
 
+    // 兼容旧数据库：添加 is_ddl 列（已有时忽略错误）
+    query.exec("ALTER TABLE schedules ADD COLUMN is_ddl INTEGER DEFAULT 0");
+
     m_initialized = true;
     return true;
 }

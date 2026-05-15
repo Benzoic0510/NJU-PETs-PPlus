@@ -14,14 +14,15 @@
 int ScheduleRepository::add(const Schedule &s) {
     QSqlQuery q(DatabaseManager::instance().database());
     q.prepare(
-        "INSERT INTO schedules (title, startTime, endTime, location, remindMins) "
-        "VALUES (:title, :start, :end, :loc, :remind)"
+        "INSERT INTO schedules (title, startTime, endTime, location, remindMins, is_ddl) "
+        "VALUES (:title, :start, :end, :loc, :remind, :isDDL)"
     );
     q.bindValue(":title",   s.title);
     q.bindValue(":start",   s.startTime.toString(Qt::ISODate));
     q.bindValue(":end",     s.endTime.toString(Qt::ISODate));
     q.bindValue(":loc",     s.location);
     q.bindValue(":remind",  s.remindMins);
+    q.bindValue(":isDDL",   s.isDDL ? 1 : 0);
 
     if (!q.exec()) {
         qWarning() << "add failed:" << q.lastError().text();
@@ -34,13 +35,14 @@ bool ScheduleRepository::update(const Schedule &s) {
     QSqlQuery q(DatabaseManager::instance().database());
     q.prepare(
         "UPDATE schedules SET title=:title, startTime=:start, endTime=:end, "
-        "location=:loc, remindMins=:remind WHERE id=:id"
+        "location=:loc, remindMins=:remind, is_ddl=:isDDL WHERE id=:id"
     );
     q.bindValue(":title",   s.title);
     q.bindValue(":start",   s.startTime.toString(Qt::ISODate));
     q.bindValue(":end",     s.endTime.toString(Qt::ISODate));
     q.bindValue(":loc",     s.location);
     q.bindValue(":remind",  s.remindMins);
+    q.bindValue(":isDDL",   s.isDDL ? 1 : 0);
     q.bindValue(":id",      s.id);
 
     if (!q.exec()) {
@@ -76,6 +78,7 @@ Schedule ScheduleRepository::getById(int id) const {
     s.endTime    = QDateTime::fromString(q.value("endTime").toString(), Qt::ISODate);
     s.location   = q.value("location").toString();
     s.remindMins = q.value("remindMins").toInt();
+    s.isDDL      = q.value("is_ddl").toInt() != 0;
     return s;
 }
 
@@ -92,6 +95,7 @@ QVector<Schedule> ScheduleRepository::getAll() const {
         s.endTime    = QDateTime::fromString(q.value("endTime").toString(), Qt::ISODate);
         s.location   = q.value("location").toString();
         s.remindMins = q.value("remindMins").toInt();
+        s.isDDL      = q.value("is_ddl").toInt() != 0;
         results.append(s);
     }
     return results;
@@ -117,6 +121,7 @@ QVector<Schedule> ScheduleRepository::getByDateRange(const QDateTime &from, cons
         s.endTime    = QDateTime::fromString(q.value("endTime").toString(), Qt::ISODate);
         s.location   = q.value("location").toString();
         s.remindMins = q.value("remindMins").toInt();
+        s.isDDL      = q.value("is_ddl").toInt() != 0;
         results.append(s);
     }
     return results;

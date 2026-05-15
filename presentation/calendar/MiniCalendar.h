@@ -19,6 +19,7 @@ public:
 
     QDate selectedDate() const { return m_selected; }
     void  setEventDates(const QSet<QDate> &dates);
+    void  setDdlDates(const QSet<QDate> &dates);
     QSize sizeHint() const override;
 
 public slots:
@@ -42,6 +43,7 @@ private:
     QDate        m_month;      // 当前显示月份的第一天
     QDate        m_selected;
     QSet<QDate>  m_eventDates;
+    QSet<QDate>  m_ddlDates;
 
     QPushButton *m_prevBtn    = nullptr;
     QLabel      *m_titleLabel = nullptr;

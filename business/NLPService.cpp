@@ -16,6 +16,7 @@ static const QString EDIT_PROMPT_TEMPLATE = QStringLiteral(
     "你是一个日程修改助手。今天是 %1。\n\n"
     "当前日程：\n"
     "  标题：%2\n"
+    "  类型：%7\n"
     "  开始：%3\n"
     "  结束：%4\n"
     "  地点：%5\n"
@@ -27,28 +28,31 @@ static const QString EDIT_PROMPT_TEMPLATE = QStringLiteral(
     "   {\"type\":\"irrelevant\",\"message\":\"我只能帮你修改日程哦~\"}\n\n"
     "2. 信息不够清晰且无法从当前日程推断 → 返回：\n"
     "   {\"type\":\"incomplete\",\"message\":\"（友好提问）\"}\n\n"
-    "3. 可以输出修改结果 → 返回：\n"
-    "   {\"type\":\"schedule\",\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
+    "3. 可以输出修改结果 → 返回（保留原 isDDL 类型，除非用户明确要求改变）：\n"
+    "   {\"type\":\"schedule\",\"isDDL\":false,\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
     "\"endTime\":\"YYYY-MM-DDTHH:mm:ss\",\"location\":\"\",\"remindMins\":15}\n\n"
     "重要：用户未提及的字段，直接使用当前日程的原值，不要修改也不要追问。\n"
     "时间计算以今天 %1 为基准。"
 );
 
 static const QString SYSTEM_PROMPT_TEMPLATE = QStringLiteral(
-    "你是一个日程记录助手，只负责帮用户添加日程。今天是 %1。\n\n"
+    "你是一个日程记录助手，只负责帮用户添加日程或截止日期。今天是 %1。\n\n"
     "每次只返回一个 JSON 对象，不要有任何其他内容，不要使用 markdown 代码块。\n\n"
     "规则：\n"
     "1. 输入与记录日程无关（闲聊、问天气、提问等）→ 返回：\n"
     "   {\"type\":\"irrelevant\",\"message\":\"我只能帮你记录日程哦~\"}\n\n"
     "2. 想记日程但缺少开始时间或事件名称 → 返回：\n"
     "   {\"type\":\"incomplete\",\"message\":\"（根据缺少的信息自然地提问，语气友好）\"}\n\n"
-    "3. 信息完整 → 返回：\n"
-    "   {\"type\":\"schedule\",\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
+    "3. 信息完整且包含「截止」「DDL」「deadline」「到期」「提交」等截止语义 → 返回：\n"
+    "   {\"type\":\"schedule\",\"isDDL\":true,\"title\":\"...\","
+    "\"startTime\":\"YYYY-MM-DDT23:59:59\",\"location\":\"\",\"remindMins\":1440}\n\n"
+    "4. 信息完整（普通日程）→ 返回：\n"
+    "   {\"type\":\"schedule\",\"isDDL\":false,\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
     "\"endTime\":\"YYYY-MM-DDTHH:mm:ss\",\"location\":\"\",\"remindMins\":15}\n\n"
     "补充说明：\n"
-    "- 缺少结束时间默认 +1 小时，无需追问\n"
+    "- isDDL 为 true 时：startTime 为截止日期当天 23:59:59，无需 endTime，remindMins 默认 1440（提前1天）\n"
+    "- 普通日程缺少结束时间默认 +1 小时，无需追问\n"
     "- 缺少地点 location 填空字符串，无需追问\n"
-    "- 缺少提醒 remindMins 填 15，无需追问\n"
     "- 时间计算以今天 %1 为基准"
 );
 
@@ -116,7 +120,8 @@ void NLPService::parseEdit(const QString &text, const Schedule &current) {
         .arg(current.startTime.toString("yyyy-MM-dd HH:mm"))
         .arg(current.endTime.toString("yyyy-MM-dd HH:mm"))
         .arg(loc)
-        .arg(remind);
+        .arg(remind)
+        .arg(current.isDDL ? "截止日期(DDL)" : "普通日程");
 
     QJsonArray messages;
     messages.append(QJsonObject{{"role", "system"}, {"content", systemPrompt}});
@@ -180,11 +185,13 @@ void NLPService::onReply(QNetworkReply *reply) {
         emit clarificationNeeded(obj["message"].toString("请提供更多信息"));
     } else if (type == "schedule") {
         Schedule s;
+        s.isDDL      = obj["isDDL"].toBool(false);
         s.title      = obj["title"].toString();
         s.startTime  = QDateTime::fromString(obj["startTime"].toString(), Qt::ISODate);
-        s.endTime    = QDateTime::fromString(obj["endTime"].toString(), Qt::ISODate);
+        s.endTime    = s.isDDL ? s.startTime
+                               : QDateTime::fromString(obj["endTime"].toString(), Qt::ISODate);
         s.location   = obj["location"].toString();
-        s.remindMins = obj["remindMins"].toInt(15);
+        s.remindMins = obj["remindMins"].toInt(s.isDDL ? 1440 : 15);
 
         if (s.title.isEmpty() || !s.startTime.isValid()) {
             emit parseFailed("日程信息解析失败，请重新描述");

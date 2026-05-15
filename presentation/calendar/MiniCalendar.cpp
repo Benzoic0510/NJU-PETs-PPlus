@@ -58,6 +58,11 @@ void MiniCalendar::setEventDates(const QSet<QDate> &dates) {
     update();
 }
 
+void MiniCalendar::setDdlDates(const QSet<QDate> &dates) {
+    m_ddlDates = dates;
+    update();
+}
+
 void MiniCalendar::selectDate(const QDate &date) {
     if (!date.isValid()) return;
     m_selected = date;
@@ -158,10 +163,20 @@ void MiniCalendar::paintEvent(QPaintEvent *) {
             p.drawText(r.adjusted(0, -4, 0, -4), Qt::AlignCenter, QString::number(date.day()));
             p.setOpacity(1.0);
 
-            // 事件小圆点
-            if (hasEvent) {
+            // 事件/DDL 小圆点
+            const bool hasDDL = m_ddlDates.contains(date);
+            p.setPen(Qt::NoPen);
+            if (hasEvent && hasDDL) {
+                // 双点：左紫（事件）右红（DDL）
                 p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::PrimaryMid));
-                p.setPen(Qt::NoPen);
+                p.drawEllipse(QPointF(r.center().x() - 4.0, r.bottom() - 4.0), 2.0, 2.0);
+                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::EventCoralBar));
+                p.drawEllipse(QPointF(r.center().x() + 4.0, r.bottom() - 4.0), 2.0, 2.0);
+            } else if (hasDDL) {
+                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::EventCoralBar));
+                p.drawEllipse(QPointF(r.center().x(), r.bottom() - 4.0), 2.0, 2.0);
+            } else if (hasEvent) {
+                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::PrimaryMid));
                 p.drawEllipse(QPointF(r.center().x(), r.bottom() - 4.0), 2.0, 2.0);
             }
         }

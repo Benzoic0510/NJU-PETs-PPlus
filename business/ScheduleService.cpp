@@ -42,12 +42,12 @@ QVector<Schedule> ScheduleService::getByDateRange(const QDateTime &from, const Q
 }
 
 bool ScheduleService::hasConflict(const Schedule &s) const {
+    if (s.isDDL) return false;  // DDL 不占时间片，不参与冲突检测
     const auto existing = m_repo.getAll();
     for (const auto &e : existing) {
-        if (e.id == s.id) continue;             // skip itself when updating
-        if (e.startTime < s.endTime && e.endTime > s.startTime) {
-            return true;                         // overlapping
-        }
+        if (e.id == s.id) continue;
+        if (e.isDDL) continue;
+        if (e.startTime < s.endTime && e.endTime > s.startTime) return true;
     }
     return false;
 }

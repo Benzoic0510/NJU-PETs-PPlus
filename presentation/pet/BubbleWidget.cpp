@@ -84,10 +84,14 @@ void BubbleWidget::showResponse(const Schedule &s) {
     m_edit->hide();  // 日程已添加，关闭输入框
 
     m_output->setText(
-        QString("已添加：%1\n%2 – %3")
-            .arg(s.title)
-            .arg(s.startTime.toString("MM月dd日 HH:mm"))
-            .arg(s.endTime.toString("HH:mm")));
+        s.isDDL
+            ? QString("已添加 DDL：%1\n截止 %2")
+                  .arg(s.title)
+                  .arg(s.startTime.toString("MM月dd日 HH:mm"))
+            : QString("已添加：%1\n%2 – %3")
+                  .arg(s.title)
+                  .arg(s.startTime.toString("MM月dd日 HH:mm"))
+                  .arg(s.endTime.toString("HH:mm")));
     m_output->show();
     m_hasOutput = true;
     updateLayout();

@@ -15,6 +15,7 @@ struct Schedule {
     QDateTime endTime;
     QString location;
     int remindMins = 0;
+    bool isDDL = false;
 };
 
 #endif //SCHEDULE_H

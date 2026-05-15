@@ -80,7 +80,14 @@ void ScheduleEditPanel::setupUi() {
     const QString labelSS =
         "font-size: 12px; color: " + QString(Theme::TextSecondary) + ";";
 
-    auto *form = new QFormLayout;
+    // DDL 复选框
+    m_isDDLCheck = new QCheckBox("设为截止日期（DDL）");
+    m_isDDLCheck->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+    connect(m_isDDLCheck, &QCheckBox::toggled, this, &ScheduleEditPanel::onDDLToggled);
+    outer->addWidget(m_isDDLCheck);
+
+    m_form = new QFormLayout;
+    auto *form = m_form;
     form->setSpacing(8);
     form->setContentsMargins(0, 0, 0, 0);
     form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
@@ -114,15 +121,11 @@ void ScheduleEditPanel::setupUi() {
     form->addRow(makeLabel("地点"), m_locEdit);
 
     m_remindBox = new QComboBox;
-    m_remindBox->addItem("不提醒",      0);
-    m_remindBox->addItem("提前 15 分钟", 15);
-    m_remindBox->addItem("提前 30 分钟", 30);
-    m_remindBox->addItem("提前 1 小时",  60);
-    m_remindBox->addItem("提前 1 天",   1440);
     m_remindBox->setStyleSheet(
         "QComboBox { border: 1px solid " + QString(Theme::Border) + ";"
         "  border-radius: 5px; padding: 2px 6px; font-size: 12px; }");
     form->addRow(makeLabel("提醒"), m_remindBox);
+    onDDLToggled(false);  // 初始化为普通日程选项
 
     outer->addLayout(form);
 
@@ -173,6 +176,12 @@ void ScheduleEditPanel::showForNew(const QDate &date) {
     m_titleEdit->clear();
     m_locEdit->clear();
 
+    // 重置 DDL 状态
+    m_isDDLCheck->blockSignals(true);
+    m_isDDLCheck->setChecked(false);
+    m_isDDLCheck->blockSignals(false);
+    onDDLToggled(false);
+
     const QDateTime now = QDateTime::currentDateTime();
     const QDateTime start(date, QTime(now.time().hour() + 1, 0));
     m_startEdit->setDateTime(start);
@@ -193,7 +202,7 @@ void ScheduleEditPanel::showForEdit(const Schedule &s) {
 
     m_nlpEdit->clear();
     m_nlpEdit->setEnabled(true);
-    m_nlpEdit->setPlaceholderText("用自然语言修改描述，或直接编辑下方字段…");
+    m_nlpEdit->setPlaceholderText("用自然语言描述，或直接编辑下方字段…");
     m_parseBtn->setEnabled(true);
     m_status->hide();
 
@@ -218,8 +227,16 @@ void ScheduleEditPanel::paintEvent(QPaintEvent *) {
 void ScheduleEditPanel::fillForm(const Schedule &s) {
     if (!s.title.isEmpty())    m_titleEdit->setText(s.title);
     if (s.startTime.isValid()) m_startEdit->setDateTime(s.startTime);
-    if (s.endTime.isValid())   m_endEdit->setDateTime(s.endTime);
-    if (!s.location.isEmpty()) m_locEdit->setText(s.location);
+
+    // 先设 DDL 状态（会重置 remindBox 选项），再填其余字段
+    m_isDDLCheck->blockSignals(true);
+    m_isDDLCheck->setChecked(s.isDDL);
+    m_isDDLCheck->blockSignals(false);
+    onDDLToggled(s.isDDL);
+
+    if (!s.isDDL && s.endTime.isValid()) m_endEdit->setDateTime(s.endTime);
+    m_locEdit->setText(s.location);
+
     for (int i = 0; i < m_remindBox->count(); ++i) {
         if (m_remindBox->itemData(i).toInt() == s.remindMins) {
             m_remindBox->setCurrentIndex(i);
@@ -234,6 +251,36 @@ void ScheduleEditPanel::setStatus(const QString &msg, bool isError) {
         QString("font-size: 11px; color: %1;")
             .arg(isError ? "#D85A30" : Theme::TextTertiary));
     m_status->show();
+    adjustSize();
+    raise();
+}
+
+// ── DDL 切换 ──────────────────────────────────────────────────────────────────
+
+void ScheduleEditPanel::onDDLToggled(bool on) {
+    m_form->setRowVisible(m_endEdit, !on);
+
+    // "开始" ↔ "截止时间"
+    if (auto *lbl = qobject_cast<QLabel*>(m_form->labelForField(m_startEdit)))
+        lbl->setText(on ? "截止" : "开始");
+
+    m_remindBox->clear();
+    if (on) {
+        m_remindBox->addItem("不提醒",      0);
+        m_remindBox->addItem("提前 1 天",   1440);
+        m_remindBox->addItem("提前 3 天",   4320);
+        m_remindBox->addItem("提前 7 天",   10080);
+        m_remindBox->addItem("提前 14 天",  20160);
+        m_remindBox->setCurrentIndex(1);  // 默认 1 天
+    } else {
+        m_remindBox->addItem("不提醒",       0);
+        m_remindBox->addItem("提前 15 分钟", 15);
+        m_remindBox->addItem("提前 30 分钟", 30);
+        m_remindBox->addItem("提前 1 小时",  60);
+        m_remindBox->addItem("提前 1 天",    1440);
+        m_remindBox->setCurrentIndex(1);  // 默认 15 分钟
+    }
+
     adjustSize();
     raise();
 }
@@ -285,16 +332,17 @@ void ScheduleEditPanel::onConfirm() {
         setStatus("标题不能为空", true);
         return;
     }
-    if (m_endEdit->dateTime() <= m_startEdit->dateTime()) {
+    if (!m_isDDLCheck->isChecked() && m_endEdit->dateTime() <= m_startEdit->dateTime()) {
         setStatus("结束时间必须晚于开始时间", true);
         return;
     }
 
     Schedule s;
-    s.id         = m_editingId;  // -1 for new, actual id for edit
+    s.id         = m_editingId;
+    s.isDDL      = m_isDDLCheck->isChecked();
     s.title      = title;
     s.startTime  = m_startEdit->dateTime();
-    s.endTime    = m_endEdit->dateTime();
+    s.endTime    = s.isDDL ? s.startTime : m_endEdit->dateTime();
     s.location   = m_locEdit->text().trimmed();
     s.remindMins = m_remindBox->currentData().toInt();
 

@@ -144,10 +144,13 @@ void CalendarPanel::setupUi(NLPService *nlp) {
 void CalendarPanel::refresh() {
     // 收集所有有日程的日期，更新月历小圆点
     const QVector<Schedule> all = m_svc->getAll();
-    QSet<QDate> eventDates;
-    for (const Schedule &s : all)
-        eventDates.insert(s.startTime.date());
+    QSet<QDate> eventDates, ddlDates;
+    for (const Schedule &s : all) {
+        if (s.isDDL) ddlDates.insert(s.startTime.date());
+        else         eventDates.insert(s.startTime.date());
+    }
     m_miniCal->setEventDates(eventDates);
+    m_miniCal->setDdlDates(ddlDates);
 
     loadDay(m_selDate);
     updateUpcoming();
@@ -229,7 +232,10 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
     vl->addWidget(titleLbl);
 
     auto *timeLbl = new QLabel(
-        s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("HH:mm"), container);
+        s.isDDL
+            ? "截止：" + s.startTime.toString("MM月dd日 HH:mm")
+            : s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("HH:mm"),
+        container);
     timeLbl->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
     vl->addWidget(timeLbl);
 
@@ -309,20 +315,36 @@ void CalendarPanel::updateUpcoming() {
         return a.startTime < b.startTime;
     });
 
-    int count = 0;
+    // 分开收集，避免普通日程填满 4 格后 DDL 被跳过
+    QVector<Schedule> upcoming;
     for (const Schedule &s : all) {
-        if (s.startTime < now || count >= 4) continue;
+        if (s.isDDL) {
+            const int days = QDate::currentDate().daysTo(s.startTime.date());
+            if (days >= 0 && days <= 7) upcoming.append(s);
+        } else {
+            if (s.startTime >= now) upcoming.append(s);
+        }
+    }
+    // 保持按 startTime 升序
+    std::sort(upcoming.begin(), upcoming.end(), [](const Schedule &a, const Schedule &b){
+        return a.startTime < b.startTime;
+    });
+
+    int count = 0;
+    for (const Schedule &s : upcoming) {
+        if (count >= 4) break;
 
         auto *row = new QWidget(m_upcomingList);
         auto *rl  = new QHBoxLayout(row);
         rl->setContentsMargins(0, 5, 0, 5);
         rl->setSpacing(8);
 
-        // 彩色小圆点
+        // 彩色小圆点：DDL 固定珊瑚色
         auto *dot = new QLabel(row);
         dot->setFixedSize(6, 6);
         dot->setStyleSheet(
-            QString("background: %1; border-radius: 3px;").arg(DOT_COLORS[count % 4]));
+            QString("background: %1; border-radius: 3px;")
+                .arg(s.isDDL ? Theme::EventCoralBar : DOT_COLORS[count % 4]));
         rl->addWidget(dot);
 
         // 标题
@@ -332,10 +354,13 @@ void CalendarPanel::updateUpcoming() {
         titleLbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         rl->addWidget(titleLbl, 1);
 
-        // 时间
-        auto *timeLbl = new QLabel(s.startTime.toString("HH:mm"), row);
+        // 时间：DDL 显示截止日期，普通日程显示时刻
+        const QString timeStr = s.isDDL
+            ? s.startTime.toString("MM/dd") + " 截止"
+            : s.startTime.toString("HH:mm");
+        auto *timeLbl = new QLabel(timeStr, row);
         timeLbl->setStyleSheet(
-            "font-size: 11px; color: " + QString(Theme::TextTertiary) + ";");
+            "font-size: 11px; color: " + QString(s.isDDL ? Theme::EventCoralBar : Theme::TextTertiary) + ";");
         rl->addWidget(timeLbl);
 
         upLayout->addWidget(row);
