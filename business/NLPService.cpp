@@ -12,6 +12,28 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 
+static const QString EDIT_PROMPT_TEMPLATE = QStringLiteral(
+    "你是一个日程修改助手。今天是 %1。\n\n"
+    "当前日程：\n"
+    "  标题：%2\n"
+    "  开始：%3\n"
+    "  结束：%4\n"
+    "  地点：%5\n"
+    "  提醒：%6\n\n"
+    "根据用户的描述输出修改后的完整日程。"
+    "每次只返回一个 JSON 对象，不要有任何其他内容，不要使用 markdown 代码块。\n\n"
+    "规则：\n"
+    "1. 输入与修改日程无关 → 返回：\n"
+    "   {\"type\":\"irrelevant\",\"message\":\"我只能帮你修改日程哦~\"}\n\n"
+    "2. 信息不够清晰且无法从当前日程推断 → 返回：\n"
+    "   {\"type\":\"incomplete\",\"message\":\"（友好提问）\"}\n\n"
+    "3. 可以输出修改结果 → 返回：\n"
+    "   {\"type\":\"schedule\",\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
+    "\"endTime\":\"YYYY-MM-DDTHH:mm:ss\",\"location\":\"\",\"remindMins\":15}\n\n"
+    "重要：用户未提及的字段，直接使用当前日程的原值，不要修改也不要追问。\n"
+    "时间计算以今天 %1 为基准。"
+);
+
 static const QString SYSTEM_PROMPT_TEMPLATE = QStringLiteral(
     "你是一个日程记录助手，只负责帮用户添加日程。今天是 %1。\n\n"
     "每次只返回一个 JSON 对象，不要有任何其他内容，不要使用 markdown 代码块。\n\n"
@@ -71,6 +93,43 @@ void NLPService::parse(const QString &text) {
 
 void NLPService::clearHistory() {
     m_history = QJsonArray();
+}
+
+void NLPService::parseEdit(const QString &text, const Schedule &current) {
+    const QString apiKey = resolveApiKey();
+    if (apiKey.isEmpty()) {
+        emit parseFailed("未配置 API Key，请设置环境变量 DASHSCOPE_API_KEY 或在设置页填写");
+        return;
+    }
+
+    m_history.append(QJsonObject{{"role", "user"}, {"content", text}});
+
+    const QString today  = QDateTime::currentDateTime().toString("yyyy年MM月dd日");
+    const QString loc    = current.location.isEmpty() ? "（无）" : current.location;
+    const QString remind = current.remindMins > 0
+                               ? QString("提前 %1 分钟").arg(current.remindMins)
+                               : "不提醒";
+
+    const QString systemPrompt = EDIT_PROMPT_TEMPLATE
+        .arg(today)
+        .arg(current.title)
+        .arg(current.startTime.toString("yyyy-MM-dd HH:mm"))
+        .arg(current.endTime.toString("yyyy-MM-dd HH:mm"))
+        .arg(loc)
+        .arg(remind);
+
+    QJsonArray messages;
+    messages.append(QJsonObject{{"role", "system"}, {"content", systemPrompt}});
+    for (const auto &v : std::as_const(m_history))
+        messages.append(v);
+
+    const QJsonObject body{{"model", MODEL}, {"messages", messages}};
+
+    QNetworkRequest req{QUrl{QString(API_URL)}};
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setRawHeader("Authorization", ("Bearer " + apiKey).toUtf8());
+
+    m_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
 void NLPService::onReply(QNetworkReply *reply) {

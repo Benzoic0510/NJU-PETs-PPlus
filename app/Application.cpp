@@ -28,7 +28,7 @@ void Application::start() {
     connectSignals();
     m_reminderService.start();
 
-    m_mainMenu = new MainMenu(&m_scheduleService, &m_nlpService);
+    m_mainMenu = new MainMenu(&m_scheduleService, &m_calendarNlpService);
     m_mainMenu->show();
 
     m_petWidget = new PetWidget;
@@ -113,9 +113,7 @@ void Application::connectSignals() {
             this, [this](const Schedule &s) {
                 // 只有 BubbleWidget 正在对话时才负责添加；CalendarPanel 的编辑面板自己添加
                 if (!m_bubbleWidget || !m_bubbleWidget->isInChat()) return;
-                m_nlpService.blockSignals(true);
                 const int id = m_scheduleService.addSchedule(s);
-                m_nlpService.blockSignals(false);
                 if (id < 0)
                     m_bubbleWidget->showError("该时间段与已有日程冲突，请换个时间。");
                 else

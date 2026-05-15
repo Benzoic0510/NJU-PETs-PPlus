@@ -33,7 +33,8 @@ private:
 
     ScheduleService m_scheduleService;
     ReminderService m_reminderService;
-    NLPService      m_nlpService;
+    NLPService      m_nlpService;         // 桌宠气泡专用
+    NLPService      m_calendarNlpService; // 日历面板专用（添加 + 修改）
     PetStateManager m_petStateManager;
 
     MainMenu          *m_mainMenu     = nullptr;

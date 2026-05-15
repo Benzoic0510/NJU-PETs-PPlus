@@ -24,6 +24,7 @@ public:
                                 QWidget *parent = nullptr);
 
     void showForNew(const QDate &date);
+    void showForEdit(const Schedule &s);
 
 signals:
     void dismissed();
@@ -46,9 +47,12 @@ private:
     ScheduleService *m_svc;
     NLPService      *m_nlp;
 
-    QLineEdit     *m_nlpEdit   = nullptr;
-    QPushButton   *m_parseBtn  = nullptr;
-    QLabel        *m_status    = nullptr;
+    QLineEdit     *m_nlpEdit    = nullptr;
+    QPushButton   *m_parseBtn   = nullptr;
+    QPushButton   *m_confirmBtn = nullptr;
+    QLabel        *m_status     = nullptr;
+    int            m_editingId      = -1;   // -1 = new, >=0 = editing
+    Schedule       m_currentSchedule;       // valid only when m_editingId >= 0
 
     QLineEdit     *m_titleEdit = nullptr;
     QDateTimeEdit *m_startEdit = nullptr;

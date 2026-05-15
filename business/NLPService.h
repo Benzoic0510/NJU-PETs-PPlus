@@ -22,6 +22,7 @@ public:
 
 public slots:
     void parse(const QString &text);
+    void parseEdit(const QString &text, const Schedule &current);
     void clearHistory();
 
 signals:

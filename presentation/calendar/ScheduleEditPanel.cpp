@@ -143,24 +143,28 @@ void ScheduleEditPanel::setupUi() {
         emit dismissed();
     });
 
-    auto *confirmBtn = new QPushButton("确认添加");
-    confirmBtn->setFixedHeight(28);
-    confirmBtn->setCursor(Qt::PointingHandCursor);
-    confirmBtn->setStyleSheet(
+    m_confirmBtn = new QPushButton("确认添加");
+    m_confirmBtn->setFixedHeight(28);
+    m_confirmBtn->setCursor(Qt::PointingHandCursor);
+    m_confirmBtn->setStyleSheet(
         "QPushButton { background: " + QString(Theme::Primary) + "; color: white;"
         "  border-radius: 6px; font-size: 12px; border: none; padding: 0 12px; }"
         "QPushButton:hover { background: " + Theme::PrimaryDark + "; }");
-    connect(confirmBtn, &QPushButton::clicked, this, &ScheduleEditPanel::onConfirm);
+    connect(m_confirmBtn, &QPushButton::clicked, this, &ScheduleEditPanel::onConfirm);
 
     btnRow->addStretch();
     btnRow->addWidget(cancelBtn);
-    btnRow->addWidget(confirmBtn);
+    btnRow->addWidget(m_confirmBtn);
     outer->addLayout(btnRow);
 
     adjustSize();
 }
 
 void ScheduleEditPanel::showForNew(const QDate &date) {
+    m_editingId = -1;
+    m_nlp->clearHistory();
+    m_confirmBtn->setText("确认添加");
+
     m_nlpEdit->clear();
     m_nlpEdit->setEnabled(true);
     m_nlpEdit->setPlaceholderText("用自然语言描述日程…");
@@ -179,6 +183,26 @@ void ScheduleEditPanel::showForNew(const QDate &date) {
     show();
     raise();
     m_nlpEdit->setFocus();
+}
+
+void ScheduleEditPanel::showForEdit(const Schedule &s) {
+    m_editingId       = s.id;
+    m_currentSchedule = s;
+    m_nlp->clearHistory();
+    m_confirmBtn->setText("保存修改");
+
+    m_nlpEdit->clear();
+    m_nlpEdit->setEnabled(true);
+    m_nlpEdit->setPlaceholderText("用自然语言修改描述，或直接编辑下方字段…");
+    m_parseBtn->setEnabled(true);
+    m_status->hide();
+
+    fillForm(s);
+
+    adjustSize();
+    show();
+    raise();
+    m_titleEdit->setFocus();
 }
 
 void ScheduleEditPanel::paintEvent(QPaintEvent *) {
@@ -222,7 +246,10 @@ void ScheduleEditPanel::onParse() {
     m_parseBtn->setEnabled(false);
     m_nlpEdit->setEnabled(false);
     setStatus("解析中…");
-    m_nlp->parse(text);
+    if (m_editingId >= 0)
+        m_nlp->parseEdit(text, m_currentSchedule);
+    else
+        m_nlp->parse(text);
 }
 
 void ScheduleEditPanel::onNlpParsed(const Schedule &s) {
@@ -264,13 +291,16 @@ void ScheduleEditPanel::onConfirm() {
     }
 
     Schedule s;
+    s.id         = m_editingId;  // -1 for new, actual id for edit
     s.title      = title;
     s.startTime  = m_startEdit->dateTime();
     s.endTime    = m_endEdit->dateTime();
     s.location   = m_locEdit->text().trimmed();
     s.remindMins = m_remindBox->currentData().toInt();
 
-    if (m_svc->addSchedule(s) < 0) {
+    bool ok = (m_editingId < 0) ? (m_svc->addSchedule(s) >= 0)
+                                 : m_svc->updateSchedule(s);
+    if (!ok) {
         setStatus("该时间段与已有日程冲突，请调整时间。", true);
     } else {
         hide();

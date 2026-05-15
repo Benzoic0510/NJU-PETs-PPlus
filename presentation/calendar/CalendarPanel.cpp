@@ -5,103 +5,16 @@
 #include "presentation/calendar/CalendarPanel.h"
 #include "presentation/common/Theme.h"
 
-#include <QComboBox>
-#include <QTime>
-#include <QDateTimeEdit>
-#include <QResizeEvent>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QScreen>
-#include <QScrollArea>
 #include <QSet>
-#include <QSpinBox>
+#include <QTime>
 #include <QVBoxLayout>
-
-// ── 新建/编辑对话框（本文件内部使用）────────────────────────────────────────
-
-static bool execScheduleDialog(Schedule &s, bool isEdit, QWidget *parent) {
-    QDialog dlg(parent);
-    dlg.setWindowTitle(isEdit ? "编辑日程" : "新建日程");
-    dlg.setMinimumWidth(340);
-
-    auto *form = new QFormLayout(&dlg);
-    form->setSpacing(12);
-    form->setContentsMargins(20, 20, 20, 12);
-
-    auto *titleEdit = new QLineEdit(&dlg);
-    titleEdit->setPlaceholderText("日程标题");
-    titleEdit->setText(s.title);
-    form->addRow("标题 *", titleEdit);
-
-    auto *startEdit = new QDateTimeEdit(&dlg);
-    startEdit->setDisplayFormat("yyyy-MM-dd  HH:mm");
-    startEdit->setCalendarPopup(true);
-    startEdit->setDateTime(s.startTime.isValid() ? s.startTime
-                                                  : QDateTime::currentDateTime().addSecs(3600));
-    form->addRow("开始时间 *", startEdit);
-
-    auto *endEdit = new QDateTimeEdit(&dlg);
-    endEdit->setDisplayFormat("yyyy-MM-dd  HH:mm");
-    endEdit->setCalendarPopup(true);
-    endEdit->setDateTime(s.endTime.isValid() ? s.endTime
-                                             : startEdit->dateTime().addSecs(3600));
-    form->addRow("结束时间", endEdit);
-
-    auto *locEdit = new QLineEdit(&dlg);
-    locEdit->setPlaceholderText("可选");
-    locEdit->setText(s.location);
-    form->addRow("地点", locEdit);
-
-    auto *remindBox = new QComboBox(&dlg);
-    remindBox->addItem("不提醒",    0);
-    remindBox->addItem("提前 15 分钟", 15);
-    remindBox->addItem("提前 30 分钟", 30);
-    remindBox->addItem("提前 1 小时",  60);
-    remindBox->addItem("提前 1 天",   1440);
-    // 选中当前值
-    for (int i = 0; i < remindBox->count(); ++i) {
-        if (remindBox->itemData(i).toInt() == s.remindMins) {
-            remindBox->setCurrentIndex(i);
-            break;
-        }
-    }
-    form->addRow("提醒", remindBox);
-
-    auto *buttons = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    buttons->button(QDialogButtonBox::Ok)->setText("确认");
-    buttons->button(QDialogButtonBox::Cancel)->setText("取消");
-    form->addRow(buttons);
-
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-    if (dlg.exec() != QDialog::Accepted) return false;
-
-    const QString title = titleEdit->text().trimmed();
-    if (title.isEmpty()) {
-        QMessageBox::warning(parent, "提示", "标题不能为空");
-        return false;
-    }
-    if (endEdit->dateTime() <= startEdit->dateTime()) {
-        QMessageBox::warning(parent, "提示", "结束时间必须晚于开始时间");
-        return false;
-    }
-
-    s.title      = title;
-    s.startTime  = startEdit->dateTime();
-    s.endTime    = endEdit->dateTime();
-    s.location   = locEdit->text().trimmed();
-    s.remindMins = remindBox->currentData().toInt();
-    return true;
-}
 
 // ── CalendarPanel ─────────────────────────────────────────────────────────────
 
@@ -367,12 +280,10 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
         m_svc->removeSchedule(id);
     });
 
-    QObject::connect(editBtn, &QPushButton::clicked, popup, [this, s, popup]() mutable {
+    QObject::connect(editBtn, &QPushButton::clicked, popup, [this, s, popup]() {
         popup->close();
-        if (execScheduleDialog(s, true, this)) {
-            if (!m_svc->updateSchedule(s))
-                QMessageBox::warning(this, "时间冲突", "该时间段与已有日程冲突，请调整时间。");
-        }
+        repositionEditPanel();
+        m_editPanel->showForEdit(s);
     });
 }
 
