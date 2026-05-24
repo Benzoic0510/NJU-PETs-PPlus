@@ -1,9 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>sprites/whale_idle.png</file>
-        <file>sprites/whale_walk.png</file>
-        <file>sprites/whale_drag.png</file>
-        <file>sprites/whale_interact.png</file>
-        <file>sprites/whale_sleep.png</file>
+        <file>sprites/Muelsyse_idle.png</file>
     </qresource>
 </RCC>

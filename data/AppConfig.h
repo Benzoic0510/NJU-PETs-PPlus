@@ -33,7 +33,7 @@ private:
 
     QString configPath() const;
 
-    QString m_petId = "whale";
+    QString m_petId = "Muelsyse";
     bool m_reminderEnabled = true;
     int m_volume = 80;
     QString m_apiKey;

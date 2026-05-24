@@ -15,7 +15,7 @@ Animator::Animator(QObject *parent)
     setFps(8);
 }
 
-void Animator::load(const QString &petId, const QString &state) {
+void Animator::load(const QString &petId, const QString &state, int rows, int cols) {
     m_petId = petId;
     m_state = state;
     m_frameIndex = 0;
@@ -24,12 +24,22 @@ void Animator::load(const QString &petId, const QString &state) {
     QPixmap sheet(path);
 
     if (!sheet.isNull()) {
+        if (cols <= 0) {                       // 单行横排：每帧为正方形
+            rows = 1;
+            cols = sheet.width() / sheet.height();
+            if (cols <= 0) cols = 1;
+        }
         m_sheet      = sheet;
-        m_frameSize  = sheet.height();
-        m_frameCount = sheet.width() / m_frameSize;
+        m_rows       = rows;
+        m_cols       = cols;
+        m_frameCount = rows * cols;
+        m_frameW     = double(sheet.width())  / cols;
+        m_frameH     = double(sheet.height()) / rows;
         m_hasSheet   = true;
     } else {
         m_hasSheet   = false;
+        m_rows       = 1;
+        m_cols       = 1;
         m_frameCount = 1;
     }
 
@@ -42,7 +52,13 @@ void Animator::setFps(int fps) {
 
 QPixmap Animator::currentFrame() const {
     if (m_hasSheet) {
-        return m_sheet.copy(m_frameIndex * m_frameSize, 0, m_frameSize, m_frameSize);
+        const int col = m_frameIndex % m_cols;
+        const int row = m_frameIndex / m_cols;
+        const int x = qRound(col * m_frameW);
+        const int y = qRound(row * m_frameH);
+        const int w = qRound((col + 1) * m_frameW) - x;
+        const int h = qRound((row + 1) * m_frameH) - y;
+        return m_sheet.copy(x, y, w, h);
     }
     return makePlaceholder();
 }
@@ -66,8 +82,8 @@ QPixmap Animator::makePlaceholder() const {
 
     // 中心文字
     p.setPen(QColor(Theme::Primary));
-    p.setFont(QFont("Segoe UI", 28));
-    p.drawText(px.rect(), Qt::AlignCenter, "🐋");
+    p.setFont(QFont("Segoe UI", 32));
+    p.drawText(px.rect(), Qt::AlignCenter, "✦");
 
     return px;
 }

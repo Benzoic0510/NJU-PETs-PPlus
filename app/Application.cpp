@@ -70,7 +70,7 @@ void Application::start() {
 }
 
 void Application::setupTrayIcon() {
-    const QPixmap sheet(":/sprites/whale_idle.png");
+    const QPixmap sheet(":/sprites/Muelsyse_idle.png");
     const QIcon icon(sheet.copy(0, 0, 128, 128).scaled(
         22, 22, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 

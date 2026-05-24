@@ -12,7 +12,7 @@
 #include <QVBoxLayout>
 
 const QVector<PetSelector::PetDef> PetSelector::PETS = {
-    {"whale", "南大小蓝鲸", ":/sprites/whale_idle.png"},
+    {"Muelsyse", "Muelsyse", ":/sprites/Muelsyse_idle.png"},
 };
 
 PetSelector::PetSelector(QWidget *parent)

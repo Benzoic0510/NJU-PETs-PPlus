@@ -27,7 +27,7 @@ void AppConfig::load() {
     if (!f.open(QIODevice::ReadOnly)) return;
 
     const QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
-    m_petId            = obj.value("petId").toString("whale");
+    m_petId            = obj.value("petId").toString("Muelsyse");
     m_reminderEnabled  = obj.value("reminderEnabled").toBool(true);
     m_volume           = obj.value("volume").toInt(80);
     m_apiKey           = obj.value("apiKey").toString();

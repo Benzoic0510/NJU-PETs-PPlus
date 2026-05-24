@@ -9,6 +9,15 @@
 #include <QPainter>
 #include <QScreen>
 
+namespace {
+struct GridInfo { int rows; int cols; };
+// 已知非「单行横排」布局的精灵图；查不到则走 Animator 自动推断
+GridInfo gridFor(const QString &petId, const QString &state) {
+    if (petId == "Muelsyse" && state == "idle") return {6, 10};
+    return {1, 0};
+}
+}
+
 PetWidget::PetWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -20,7 +29,10 @@ PetWidget::PetWidget(QWidget *parent)
     move(screen.right() - 160, screen.bottom() - 160);
 
     connect(&m_animator, &Animator::frameChanged, this, QOverload<>::of(&QWidget::update));
-    m_animator.load(m_petId, "idle");
+    {
+        const auto g = gridFor(m_petId, "idle");
+        m_animator.load(m_petId, "idle", g.rows, g.cols);
+    }
 
     // 主菜单：日程 / 动作 / 面板 / 退出
     connect(&m_mainMenu, &RadialMenu::triggered, this, [this](int idx) {
@@ -39,22 +51,24 @@ PetWidget::PetWidget(QWidget *parent)
 
 void PetWidget::loadPet(const QString &petId) {
     m_petId = petId;
-    m_animator.load(m_petId, "idle");
+    const auto g = gridFor(m_petId, "idle");
+    m_animator.load(m_petId, "idle", g.rows, g.cols);
 }
 
 void PetWidget::onStateChanged(const QString &state) {
-    m_animator.load(m_petId, state);
+    const auto g = gridFor(m_petId, state);
+    m_animator.load(m_petId, state, g.rows, g.cols);
 }
 
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
     m_lastRightClick = center;
-    m_mainMenu.popup(center, {{"日程"}, {"动作"}, {"面板"}, {"退出"}});
+    m_mainMenu.popup(center, {{"日程", "📅"}, {"动作", "🎭"}, {"面板", "🪟"}, {"退出", "✕"}});
 }
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_actionMenu.popup(center, {{"闲置"}, {"行走"}, {"互动"}, {"睡眠"}});
+    m_actionMenu.popup(center, {{"闲置", "😴"}, {"行走", "🚶"}, {"互动", "✨"}, {"睡眠", "🌙"}});
 }
 
 void PetWidget::paintEvent(QPaintEvent *) {

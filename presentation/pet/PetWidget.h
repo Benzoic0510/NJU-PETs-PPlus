@@ -43,7 +43,7 @@ private:
     Animator   m_animator;
     RadialMenu m_mainMenu;
     RadialMenu m_actionMenu;
-    QString    m_petId    = "whale";
+    QString    m_petId    = "Muelsyse";
     QPoint     m_dragStart;
     bool       m_dragging = false;
     QPoint     m_lastRightClick;
