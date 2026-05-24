@@ -1,0 +1,24 @@
+# Python virtual environment
+.venv/
+
+# IDE
+.idea/
+
+# Claude Code local settings
+.claude/
+
+# Input videos
+input/
+
+# Extracted frames
+frames/
+
+# Generated outputs
+output/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# SAM model (optional AI background removal)
+sam_model/
