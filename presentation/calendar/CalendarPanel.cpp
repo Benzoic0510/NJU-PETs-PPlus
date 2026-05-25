@@ -150,7 +150,14 @@ void CalendarPanel::refresh() {
     QSet<QDate> eventDates, ddlDates;
     for (const Schedule &s : all) {
         if (s.isDDL) ddlDates.insert(s.startTime.date());
-        else         eventDates.insert(s.startTime.date());
+        else {
+            QDate d = s.startTime.date();
+            const QDate endDate = s.endTime.date();
+            while (d.isValid() && d <= endDate) {
+                eventDates.insert(d);
+                d = d.addDays(1);
+            }
+        }
     }
     m_miniCal->setEventDates(eventDates);
     m_miniCal->setDdlDates(ddlDates);
@@ -175,7 +182,7 @@ void CalendarPanel::loadDay(const QDate &date) {
 
     // 过滤当天日程
     const QDateTime from(date, QTime(0, 0));
-    const QDateTime to(date, QTime(23, 59, 59));
+    const QDateTime to(date.addDays(1), QTime(0, 0));
     const QVector<Schedule> daySchedules = m_svc->getByDateRange(from, to);
     m_timeline->setSchedules(date, daySchedules);
 }
@@ -234,11 +241,12 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
     titleLbl->setWordWrap(true);
     vl->addWidget(titleLbl);
 
-    auto *timeLbl = new QLabel(
-        s.isDDL
-            ? "截止：" + s.startTime.toString("MM月dd日 HH:mm")
-            : s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("HH:mm"),
-        container);
+    const QString timeText = s.isDDL
+        ? "截止：" + s.startTime.toString("MM月dd日 HH:mm")
+        : (s.startTime.date() == s.endTime.date()
+            ? s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("HH:mm")
+            : s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("MM月dd日 HH:mm"));
+    auto *timeLbl = new QLabel(timeText, container);
     timeLbl->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
     vl->addWidget(timeLbl);
 

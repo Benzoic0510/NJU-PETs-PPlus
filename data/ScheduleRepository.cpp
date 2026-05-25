@@ -105,7 +105,9 @@ QVector<Schedule> ScheduleRepository::getByDateRange(const QDateTime &from, cons
     QVector<Schedule> results;
     QSqlQuery q(DatabaseManager::instance().database());
     q.prepare(
-        "SELECT * FROM schedules WHERE startTime <= :end AND endTime >= :start "
+        "SELECT * FROM schedules WHERE "
+        "((is_ddl = 0 AND startTime < :end AND endTime > :start) "
+        " OR (is_ddl != 0 AND startTime >= :start AND startTime < :end)) "
         "ORDER BY startTime ASC"
     );
     q.bindValue(":start", from.toString(Qt::ISODate));

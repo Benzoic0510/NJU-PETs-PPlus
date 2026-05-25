@@ -35,10 +35,15 @@ TimelineCanvas::TimelineCanvas(QWidget *parent)
 
 int TimelineCanvas::yForTime(const QTime &t) const {
     const int totalMins = (t.hour() - StartH) * 60 + t.minute();
-    return TopPad + totalMins * SlotH / 60;
+    return yForDayMinute(totalMins);
 }
 
-void TimelineCanvas::setSchedules(const QVector<Schedule> &schedules) {
+int TimelineCanvas::yForDayMinute(int minute) const {
+    return TopPad + minute * SlotH / 60;
+}
+
+void TimelineCanvas::setSchedules(const QDate &date, const QVector<Schedule> &schedules) {
+    m_date = date;
     m_schedules = schedules;
     rebuildCards();
     update();
@@ -51,13 +56,15 @@ void TimelineCanvas::rebuildCards() {
     if (eventAreaW <= 0) return;
 
     QVector<int> ddlLabelYs;
+    const QDateTime dayStart(m_date, QTime(0, 0));
+    const QDateTime dayEnd(m_date.addDays(1), QTime(0, 0));
 
     for (int i = 0; i < m_schedules.size(); ++i) {
         const Schedule &s = m_schedules[i];
-        const QTime st = s.startTime.time();
 
         if (s.isDDL) {
-            const int lineY = yForTime(st);
+            if (s.startTime.date() != m_date) continue;
+            const int lineY = yForTime(s.startTime.time());
             const int flagW = qMin(200, eventAreaW);
             int labelY = lineY - 12;
             for (int usedY : ddlLabelYs) {
@@ -68,18 +75,27 @@ void TimelineCanvas::rebuildCards() {
                 QRect(eventAreaX + eventAreaW - flagW, labelY, flagW, 24),
                 s.id,
                 2,   // coral
-                i
+                i,
+                s.startTime,
+                s.startTime
             });
         } else {
-            const QTime et = s.endTime.time();
-            int y = yForTime(st);
-            int h = yForTime(et) - y;
+            const QDateTime visibleStart = s.startTime > dayStart ? s.startTime : dayStart;
+            const QDateTime visibleEnd = s.endTime < dayEnd ? s.endTime : dayEnd;
+            if (visibleEnd <= visibleStart) continue;
+
+            const int startMinute = dayStart.secsTo(visibleStart) / 60;
+            const int endMinute = dayStart.secsTo(visibleEnd) / 60;
+            int y = yForDayMinute(startMinute);
+            int h = yForDayMinute(endMinute) - y;
             if (h < 24) h = 24;
             m_cards.append({
                 QRect(eventAreaX, y, eventAreaW, h),
                 s.id,
                 i % 4,
-                i
+                i,
+                visibleStart,
+                visibleEnd
             });
         }
     }
@@ -140,7 +156,9 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
         if (card.rect.height() >= 40) {
             p.setFont(metaFont);
             p.setPen(QColor(c.bar));
-            QString meta = s.startTime.toString("HH:mm") + " – " + s.endTime.toString("HH:mm");
+            QString meta = card.visibleStart.toString("HH:mm") + " – " + card.visibleEnd.toString("HH:mm");
+            if (s.startTime.date() != m_date || s.endTime.date() != m_date)
+                meta += "  ·  跨日";
             if (!s.location.isEmpty()) meta += "  ·  " + s.location;
             const QRect metaRect = textRect.adjusted(0, 16, 0, 0);
             p.drawText(metaRect, Qt::AlignLeft | Qt::AlignTop,
@@ -221,7 +239,7 @@ void TimelineView::scrollToTime(const QTime &t) {
 }
 
 void TimelineView::setSchedules(const QDate &date, const QVector<Schedule> &schedules) {
-    m_canvas->setSchedules(schedules);
+    m_canvas->setSchedules(date, schedules);
     if (date != m_lastDate) {
         m_lastDate = date;
         const int y = m_canvas->yForHour(8) - 15;

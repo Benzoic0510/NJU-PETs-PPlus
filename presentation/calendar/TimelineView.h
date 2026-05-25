@@ -18,7 +18,7 @@ class TimelineCanvas : public QWidget {
 
 public:
     explicit TimelineCanvas(QWidget *parent = nullptr);
-    void setSchedules(const QVector<Schedule> &schedules);
+    void setSchedules(const QDate &date, const QVector<Schedule> &schedules);
     int  yForHour(int h) const { return TopPad + (h - StartH) * SlotH; }
     int  yForTime(const QTime &t) const;
 
@@ -35,10 +35,14 @@ private:
         int   scheduleId;
         int   colorIdx;
         int   scheduleIdx;  // index into m_schedules
+        QDateTime visibleStart;
+        QDateTime visibleEnd;
     };
 
     void rebuildCards();
+    int  yForDayMinute(int minute) const;
 
+    QDate m_date;
     QVector<Schedule> m_schedules;
     QVector<CardInfo> m_cards;
 
