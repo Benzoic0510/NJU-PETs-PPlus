@@ -20,7 +20,7 @@ void Animator::load(const QString &petId, const QString &state, int rows, int co
     m_state = state;
     m_frameIndex = 0;
 
-    const QString path = ":/sprites/" + petId + "_" + state + ".png";
+    const QString path = ":/sprites/" + petId + "/" + state + ".png";
     QPixmap sheet(path);
 
     if (!sheet.isNull()) {
