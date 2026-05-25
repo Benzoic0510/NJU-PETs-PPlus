@@ -15,11 +15,13 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QVariantAnimation>
+#include <QVector>
 #include <QWidget>
 
 #include <functional>
 
 class CalendarPanel;
+class SettingsPanel;
 
 class MainMenu : public QWidget {
     Q_OBJECT
@@ -33,6 +35,8 @@ public slots:
 signals:
     void petSelected(const QString &petId);
     void petScaleChanged(int scale);
+    void petSleepThresholdChanged(int mins);
+    void petInteractionDisabledChanged(bool disabled);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -48,6 +52,9 @@ private:
     void         completePageSwitch(int id);
     void         playContextExit(int id, const std::function<void()> &finished);
     void         playContextEnter(int id);
+    void         prepareSettingsContextEnter();
+    void         playSettingsContextEnter();
+    void         moveSettingsIndicator(int index, bool animated);
     void         animateContextWidth(int targetWidth);
     void         prepareRightSurfaceEnter(int id);
     void         playRightSurfaceEnter(int id);
@@ -63,10 +70,16 @@ private:
     QWidget        *m_titleBar = nullptr;
     QWidget        *m_petReveal = nullptr;
     QWidget        *m_scheduleReveal = nullptr;
+    QWidget        *m_settingsContext = nullptr;
+    QWidget        *m_settingsIndicator = nullptr;
+    QVector<QWidget *> m_settingsTagHosts;
     CalendarPanel  *m_calendarPanel = nullptr;
+    SettingsPanel  *m_settingsPanel = nullptr;
     QVariantAnimation *m_contextWidthAnim = nullptr;
     QVariantAnimation *m_rightSurfaceHeightAnim = nullptr;
+    QVariantAnimation *m_settingsIndicatorAnim = nullptr;
     int             m_currentPage = 0;
+    int             m_settingsCurrentIndex = 0;
     bool            m_pageSwitching = false;
     bool            m_dragging = false;
     QPoint          m_dragStartGlobal;

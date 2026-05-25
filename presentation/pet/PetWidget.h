@@ -31,6 +31,7 @@ signals:
 public slots:
     void onStateChanged(const QString &state);
     void setPetScale(int scale);
+    void setInteractionDisabled(bool disabled);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -53,6 +54,7 @@ private:
     int        m_petScale    = 100;
     QPoint     m_dragStart;
     bool       m_dragging    = false;
+    bool       m_interactionDisabled = false;
     QPoint     m_lastRightClick;
     SleepPhase m_sleepPhase  = SleepNone;
     bool       m_wakePending = false;

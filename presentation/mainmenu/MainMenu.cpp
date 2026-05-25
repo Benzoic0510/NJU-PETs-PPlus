@@ -11,12 +11,14 @@
 
 #include <QEvent>
 #include <QFrame>
+#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
 #include <QPropertyAnimation>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -24,6 +26,7 @@
 #include <QVBoxLayout>
 
 #include <functional>
+#include <algorithm>
 #include <memory>
 
 namespace {
@@ -36,6 +39,15 @@ QColor mixColor(const QColor &from, const QColor &to, qreal amount) {
         from.blueF()  + (to.blueF()  - from.blueF())  * t,
         from.alphaF() + (to.alphaF() - from.alphaF()) * t
     );
+}
+
+qreal easeOutCubicValue(qreal value) {
+    const qreal t = 1.0 - qBound<qreal>(0.0, value, 1.0);
+    return 1.0 - t * t * t;
+}
+
+qreal interpolate(qreal from, qreal to, qreal progress) {
+    return from + (to - from) * qBound<qreal>(0.0, progress, 1.0);
 }
 
 class TopNavButton : public QPushButton {
@@ -276,7 +288,7 @@ public:
         setRevealOpacity(1.0);
 
         m_scaleAnim = new QVariantAnimation(this);
-        m_scaleAnim->setDuration(120);
+        m_scaleAnim->setDuration(100);
         m_scaleAnim->setEasingCurve(QEasingCurve::InCubic);
         m_scaleAnim->setStartValue(1.0);
         m_scaleAnim->setEndValue(0.92);
@@ -467,7 +479,7 @@ public:
         setRevealOpacity(1.0);
 
         m_scaleAnim = new QVariantAnimation(this);
-        m_scaleAnim->setDuration(120);
+        m_scaleAnim->setDuration(100);
         m_scaleAnim->setEasingCurve(QEasingCurve::InCubic);
         m_scaleAnim->setStartValue(1.0);
         m_scaleAnim->setEndValue(0.92);
@@ -563,6 +575,116 @@ private:
     bool m_animating = false;
     QVariantAnimation *m_scaleAnim = nullptr;
     QVariantAnimation *m_opacityAnim = nullptr;
+};
+
+class SettingsTagHost : public QWidget {
+public:
+    explicit SettingsTagHost(QPushButton *button, QWidget *parent = nullptr)
+        : QWidget(parent), m_button(button)
+    {
+        setFixedHeight(34);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+        m_button->setParent(this);
+        m_effect = new QGraphicsOpacityEffect(m_button);
+        m_button->setGraphicsEffect(m_effect);
+        m_effect->setOpacity(1.0);
+        updateButtonGeometry();
+    }
+
+    QPushButton *button() const { return m_button; }
+
+    void prepareEnter() {
+        stopAnimation();
+        ++m_generation;
+        setOffset(StartOffset);
+        if (m_effect)
+            m_effect->setOpacity(0.0);
+    }
+
+    void playEnter(int delayMs) {
+        stopAnimation();
+        setOffset(StartOffset);
+        if (m_effect)
+            m_effect->setOpacity(0.0);
+
+        const int generation = ++m_generation;
+        QTimer::singleShot(delayMs, this, [this, generation]() {
+            if (generation != m_generation)
+                return;
+
+            m_anim = new QVariantAnimation(this);
+            m_anim->setDuration(AnimMs);
+            m_anim->setEasingCurve(QEasingCurve::Linear);
+            m_anim->setStartValue(0.0);
+            m_anim->setEndValue(1.0);
+            connect(m_anim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+                const qreal t = qBound<qreal>(0.0, value.toReal(), 1.0);
+                if (m_effect)
+                    m_effect->setOpacity(easeOutCubicValue(t));
+
+                qreal offset = 0.0;
+                if (t < ForwardPart)
+                    offset = interpolate(StartOffset, OvershootOffset, easeOutCubicValue(t / ForwardPart));
+                else
+                    offset = interpolate(OvershootOffset, 0.0,
+                                         easeOutCubicValue((t - ForwardPart) / (1.0 - ForwardPart)));
+                setOffset(offset);
+            });
+            connect(m_anim, &QVariantAnimation::finished, this, [this]() {
+                setOffset(0.0);
+                if (m_effect)
+                    m_effect->setOpacity(1.0);
+                m_anim = nullptr;
+            });
+            m_anim->start(QAbstractAnimation::DeleteWhenStopped);
+        });
+    }
+
+protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QWidget::resizeEvent(event);
+        updateButtonGeometry();
+    }
+
+private:
+    void stopAnimation() {
+        if (m_anim) {
+            m_anim->stop();
+            m_anim->deleteLater();
+            m_anim = nullptr;
+        }
+    }
+
+    void setOffset(qreal offset) {
+        m_offset = offset;
+        updateButtonGeometry();
+    }
+
+    void updateButtonGeometry() {
+        if (!m_button)
+            return;
+        m_button->setGeometry(qRound(m_offset), 0, width(), height());
+    }
+
+    QPushButton *m_button = nullptr;
+    QGraphicsOpacityEffect *m_effect = nullptr;
+    QVariantAnimation *m_anim = nullptr;
+    qreal m_offset = 0.0;
+    int m_generation = 0;
+
+    static constexpr int DelayStepMs = 60;
+    static constexpr int AnimMs = 240;
+    static constexpr qreal StartOffset = -60.0;
+    static constexpr qreal OvershootOffset = 6.0;
+    static constexpr qreal ForwardPart = 0.6;
+
+public:
+    static int delayForIndex(int index) { return index * DelayStepMs; }
+    static int animMs() { return AnimMs; }
+    static qreal startOffset() { return StartOffset; }
+    static qreal overshootOffset() { return OvershootOffset; }
+    static qreal forwardPart() { return ForwardPart; }
 };
 
 } // namespace
@@ -705,8 +827,13 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     m_calendarPanel = calendarPanel;
     auto *settingsPanel = new SettingsPanel;
     settingsPanel->setStyleSheet("background: transparent;");
+    m_settingsPanel = settingsPanel;
     connect(settingsPanel, &SettingsPanel::petScaleChanged,
             this,          &MainMenu::petScaleChanged);
+    connect(settingsPanel, &SettingsPanel::petSleepThresholdChanged,
+            this,          &MainMenu::petSleepThresholdChanged);
+    connect(settingsPanel, &SettingsPanel::petInteractionDisabledChanged,
+            this,          &MainMenu::petInteractionDisabledChanged);
 
     auto *scheduleContextReveal = new ContextPopHost(calendarPanel->contextPanel());
     m_scheduleReveal = scheduleContextReveal;
@@ -743,7 +870,7 @@ QPushButton *MainMenu::makeContextBtn(const QString &text) {
     btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     btn->setStyleSheet(
         "QPushButton {"
-        "  text-align:left; padding:0 12px;"
+        "  text-align:left; padding:0 20px;"
         "  border:none; border-radius:8px;"
         "  background:transparent;"
         "  color:" + QString(Theme::TextSecondary) + ";"
@@ -754,7 +881,7 @@ QPushButton *MainMenu::makeContextBtn(const QString &text) {
         "  color:" + QString(Theme::PrimaryDark) + ";"
         "}"
         "QPushButton:checked {"
-        "  background:" + QString(Theme::PrimaryBg) + ";"
+        "  background:transparent;"
         "  color:" + QString(Theme::PrimaryDark) + ";"
         "  font-weight:600;"
         "}"
@@ -782,29 +909,38 @@ QWidget *MainMenu::makePetContext() {
 
 QWidget *MainMenu::makeSettingsContext(SettingsPanel *settingsPanel) {
     auto *page = new QWidget;
+    m_settingsContext = page;
+    m_settingsTagHosts.clear();
     auto *root = new QVBoxLayout(page);
     root->setContentsMargins(14, 22, 14, 18);
-    root->setSpacing(10);
-
-    auto *label = new QLabel("设置类别");
-    label->setStyleSheet(
-        "font-size: 12px; font-weight: 600;"
-        "color:" + QString(Theme::TextTertiary) + ";"
-        "letter-spacing:0;");
-    root->addWidget(label);
+    root->setSpacing(4);
 
     auto *group = new QButtonGroup(page);
     group->setExclusive(true);
 
-    const QStringList labels = {"宠物", "日程"};
+    const QStringList labels = {"宠物", "日程", "1", "2"};
     for (int i = 0; i < labels.size(); ++i) {
         auto *btn = makeContextBtn(labels[i]);
+        auto *host = new SettingsTagHost(btn, page);
+        m_settingsTagHosts.append(host);
         group->addButton(btn, i);
-        root->addWidget(btn);
+        root->addWidget(host);
         if (i == 0) btn->setChecked(true);
     }
 
-    connect(group, &QButtonGroup::idClicked, settingsPanel, &SettingsPanel::setCategory);
+    m_settingsIndicator = new QWidget(page);
+    m_settingsIndicator->setFixedSize(4, 20);
+    m_settingsIndicator->setStyleSheet(
+        "background:" + QString(Theme::Primary) + ";"
+        "border-radius:2px;");
+    m_settingsIndicator->raise();
+    m_settingsIndicator->hide();
+
+    connect(group, &QButtonGroup::idClicked, this, [this, settingsPanel](int id) {
+        m_settingsCurrentIndex = qBound(0, id, m_settingsTagHosts.size() - 1);
+        settingsPanel->setCategory(id);
+        moveSettingsIndicator(m_settingsCurrentIndex, true);
+    });
     root->addStretch();
     return page;
 }
@@ -855,6 +991,17 @@ void MainMenu::switchPage(int id) {
         m_calendarPanel->playTimelineExit(finishOne);
         return;
     }
+    if (m_currentPage == 2 && m_settingsPanel) {
+        auto remaining = std::make_shared<int>(2);
+        auto finishOne = [this, target, remaining]() {
+            --(*remaining);
+            if (*remaining == 0)
+                completePageSwitch(target);
+        };
+        playContextExit(m_currentPage, finishOne);
+        m_settingsPanel->playGroupsExit(finishOne);
+        return;
+    }
 
     playContextExit(m_currentPage, [this, target]() {
         completePageSwitch(target);
@@ -872,16 +1019,30 @@ void MainMenu::completePageSwitch(int id) {
         static_cast<ContextPopHost *>(m_scheduleReveal)->preparePop();
     if (target == 1 && m_calendarPanel)
         m_calendarPanel->prepareTimelineEnter();
+    if (target == 2)
+        prepareSettingsContextEnter();
+    if (target == 2 && m_settingsPanel)
+        m_settingsPanel->prepareGroupsEnter();
     prepareRightSurfaceEnter(target);
 
     m_stack->setCurrentIndex(target);
     m_contextStack->setCurrentIndex(target);
+    if (target == 2)
+        prepareSettingsContextEnter();
+    if (target == 2 && m_settingsPanel)
+        m_settingsPanel->prepareGroupsEnter();
     updateRightSurfaceStyle(target);
 
-    static constexpr int ContextWidths[] = {260, 320, 196, 0};
+    static constexpr int ContextWidths[] = {260, 320, 120, 0};
     animateContextWidth(ContextWidths[target]);
     m_currentPage = target;
     playContextEnter(target);
+    if (target == 2 && m_settingsPanel) {
+        QTimer::singleShot(40, m_settingsPanel, [this]() {
+            if (m_currentPage == 2 && m_settingsPanel)
+                m_settingsPanel->playGroupsEnter();
+        });
+    }
     playRightSurfaceEnter(target);
     if (target == 1 && m_calendarPanel) {
         QTimer::singleShot(40, m_calendarPanel, [this]() {
@@ -916,7 +1077,160 @@ void MainMenu::playContextEnter(int id) {
             if (m_contextStack && m_contextStack->currentIndex() == 1 && m_scheduleReveal)
                 static_cast<ContextPopHost *>(m_scheduleReveal)->playPop();
         });
+    } else if (id == 2) {
+        QTimer::singleShot(40, this, [this]() {
+            if (m_contextStack && m_contextStack->currentIndex() == 2)
+                playSettingsContextEnter();
+        });
     }
+}
+
+void MainMenu::prepareSettingsContextEnter() {
+    for (QWidget *host : m_settingsTagHosts) {
+        if (auto *tagHost = static_cast<SettingsTagHost *>(host))
+            tagHost->prepareEnter();
+    }
+
+    if (!m_settingsContext || !m_settingsIndicator || m_settingsTagHosts.isEmpty())
+        return;
+
+    if (auto *layout = m_settingsContext->layout())
+        layout->activate();
+
+    if (m_settingsIndicatorAnim) {
+        m_settingsIndicatorAnim->stop();
+        m_settingsIndicatorAnim->deleteLater();
+        m_settingsIndicatorAnim = nullptr;
+    }
+
+    const int currentIndex = qBound(0, m_settingsCurrentIndex, m_settingsTagHosts.size() - 1);
+    QWidget *host = m_settingsTagHosts[currentIndex];
+    const QPoint hostPos = host->mapTo(m_settingsContext, QPoint(0, 0));
+    const int targetX = hostPos.x();
+    const int targetY = hostPos.y() + (host->height() - m_settingsIndicator->height()) / 2;
+
+    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(m_settingsIndicator->graphicsEffect());
+    if (!effect) {
+        effect = new QGraphicsOpacityEffect(m_settingsIndicator);
+        m_settingsIndicator->setGraphicsEffect(effect);
+    }
+    effect->setOpacity(0.0);
+    m_settingsIndicator->move(targetX + qRound(SettingsTagHost::startOffset()), targetY);
+    m_settingsIndicator->show();
+    m_settingsIndicator->raise();
+}
+
+void MainMenu::playSettingsContextEnter() {
+    for (int i = 0; i < m_settingsTagHosts.size(); ++i) {
+        if (auto *tagHost = static_cast<SettingsTagHost *>(m_settingsTagHosts[i]))
+            tagHost->playEnter(SettingsTagHost::delayForIndex(i));
+    }
+
+    if (!m_settingsContext || !m_settingsIndicator || m_settingsTagHosts.isEmpty())
+        return;
+
+    const int currentIndex = qBound(0, m_settingsCurrentIndex, m_settingsTagHosts.size() - 1);
+    QWidget *host = m_settingsTagHosts[currentIndex];
+    const QPoint hostPos = host->mapTo(m_settingsContext, QPoint(0, 0));
+    const int targetX = hostPos.x();
+    const int targetY = hostPos.y() + (host->height() - m_settingsIndicator->height()) / 2;
+
+    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(m_settingsIndicator->graphicsEffect());
+    if (!effect) {
+        effect = new QGraphicsOpacityEffect(m_settingsIndicator);
+        m_settingsIndicator->setGraphicsEffect(effect);
+    }
+    effect->setOpacity(0.0);
+    m_settingsIndicator->move(targetX + qRound(SettingsTagHost::startOffset()), targetY);
+    m_settingsIndicator->show();
+    m_settingsIndicator->raise();
+
+    if (m_settingsIndicatorAnim) {
+        m_settingsIndicatorAnim->stop();
+        m_settingsIndicatorAnim->deleteLater();
+    }
+
+    QTimer::singleShot(SettingsTagHost::delayForIndex(currentIndex), m_settingsIndicator,
+                       [this, effect, targetX, targetY, currentIndex]() {
+        if (m_currentPage != 2 || m_settingsCurrentIndex != currentIndex || !m_settingsIndicator)
+            return;
+
+        m_settingsIndicatorAnim = new QVariantAnimation(this);
+        m_settingsIndicatorAnim->setDuration(SettingsTagHost::animMs());
+        m_settingsIndicatorAnim->setEasingCurve(QEasingCurve::Linear);
+        m_settingsIndicatorAnim->setStartValue(0.0);
+        m_settingsIndicatorAnim->setEndValue(1.0);
+        connect(m_settingsIndicatorAnim, &QVariantAnimation::valueChanged, this,
+                [this, effect, targetX, targetY](const QVariant &value) {
+            const qreal t = qBound<qreal>(0.0, value.toReal(), 1.0);
+            effect->setOpacity(easeOutCubicValue(t));
+
+            qreal offset = 0.0;
+            const qreal forwardPart = SettingsTagHost::forwardPart();
+            if (t < forwardPart)
+                offset = interpolate(SettingsTagHost::startOffset(), SettingsTagHost::overshootOffset(),
+                                     easeOutCubicValue(t / forwardPart));
+            else
+                offset = interpolate(SettingsTagHost::overshootOffset(), 0.0,
+                                     easeOutCubicValue((t - forwardPart) / (1.0 - forwardPart)));
+
+            if (m_settingsIndicator)
+                m_settingsIndicator->move(targetX + qRound(offset), targetY);
+        });
+        connect(m_settingsIndicatorAnim, &QVariantAnimation::finished, this, [this, effect, targetX, targetY]() {
+            effect->setOpacity(1.0);
+            if (m_settingsIndicator) {
+                m_settingsIndicator->move(targetX, targetY);
+                m_settingsIndicator->raise();
+            }
+            m_settingsIndicatorAnim = nullptr;
+        });
+        m_settingsIndicatorAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    });
+}
+
+void MainMenu::moveSettingsIndicator(int index, bool animated) {
+    if (!m_settingsContext || !m_settingsIndicator || index < 0 || index >= m_settingsTagHosts.size())
+        return;
+
+    QWidget *host = m_settingsTagHosts[index];
+    if (!host)
+        return;
+
+    const QPoint hostPos = host->mapTo(m_settingsContext, QPoint(0, 0));
+    const int targetX = hostPos.x();
+    const int targetY = hostPos.y() + (host->height() - m_settingsIndicator->height()) / 2;
+
+    m_settingsIndicator->show();
+    m_settingsIndicator->raise();
+
+    if (m_settingsIndicatorAnim) {
+        m_settingsIndicatorAnim->stop();
+        m_settingsIndicatorAnim->deleteLater();
+        m_settingsIndicatorAnim = nullptr;
+    }
+
+    if (!animated) {
+        m_settingsIndicator->move(targetX, targetY);
+        return;
+    }
+
+    m_settingsIndicatorAnim = new QVariantAnimation(this);
+    m_settingsIndicatorAnim->setDuration(180);
+    m_settingsIndicatorAnim->setEasingCurve(QEasingCurve::OutCubic);
+    m_settingsIndicatorAnim->setStartValue(m_settingsIndicator->pos().y());
+    m_settingsIndicatorAnim->setEndValue(targetY);
+    m_settingsIndicator->move(targetX, m_settingsIndicator->y());
+    connect(m_settingsIndicatorAnim, &QVariantAnimation::valueChanged, this, [this, targetX](const QVariant &value) {
+        if (m_settingsIndicator)
+            m_settingsIndicator->move(targetX, value.toInt());
+    });
+    connect(m_settingsIndicatorAnim, &QVariantAnimation::finished, this, [this, targetX, targetY]() {
+        if (m_settingsIndicator)
+            m_settingsIndicator->move(targetX, targetY);
+        m_settingsIndicatorAnim = nullptr;
+    });
+    m_settingsIndicatorAnim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void MainMenu::animateContextWidth(int targetWidth) {
@@ -1039,7 +1353,7 @@ void MainMenu::updatePetContext(const QString &petId) {
 void MainMenu::updateRightSurfaceStyle(int pageId) {
     if (!m_rightSurface) return;
 
-    if (pageId == 0 || pageId == 3) {
+    if (pageId == 0 || pageId == 2 || pageId == 3) {
         m_rightSurface->setStyleSheet(
             "#rightContentSurface {"
             "  background: transparent;"

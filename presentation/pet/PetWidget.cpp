@@ -17,6 +17,7 @@ PetWidget::PetWidget(QWidget *parent)
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
     setPetScale(AppConfig::instance().petScale());
+    setInteractionDisabled(AppConfig::instance().petInteractionDisabled());
 
     const QRect screen = QGuiApplication::primaryScreen()->availableGeometry();
     move(screen.right() - 160, screen.bottom() - 160);
@@ -57,6 +58,15 @@ void PetWidget::setPetScale(int scale) {
     const int side = 128 * m_petScale / 100;
     setFixedSize(side, side);
     update();
+}
+
+void PetWidget::setInteractionDisabled(bool disabled) {
+    m_interactionDisabled = disabled;
+    if (disabled) {
+        m_dragging = false;
+        m_mainMenu.hide();
+        m_actionMenu.hide();
+    }
 }
 
 void PetWidget::onStateChanged(const QString &state) {
@@ -123,6 +133,11 @@ void PetWidget::paintEvent(QPaintEvent *) {
 }
 
 void PetWidget::mousePressEvent(QMouseEvent *event) {
+    if (m_interactionDisabled) {
+        event->ignore();
+        return;
+    }
+
     if (event->button() == Qt::LeftButton) {
         m_dragStart = event->globalPosition().toPoint() - frameGeometry().topLeft();
         m_dragging  = false;
@@ -132,6 +147,11 @@ void PetWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 void PetWidget::mouseMoveEvent(QMouseEvent *event) {
+    if (m_interactionDisabled) {
+        event->ignore();
+        return;
+    }
+
     if (!(event->buttons() & Qt::LeftButton)) return;
 
     const QPoint delta = event->globalPosition().toPoint() - frameGeometry().topLeft() - m_dragStart;
@@ -146,6 +166,11 @@ void PetWidget::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void PetWidget::mouseReleaseEvent(QMouseEvent *event) {
+    if (m_interactionDisabled) {
+        event->ignore();
+        return;
+    }
+
     if (event->button() != Qt::LeftButton) return;
 
     if (m_dragging) {

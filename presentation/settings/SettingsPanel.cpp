@@ -6,11 +6,197 @@
 #include "data/AppConfig.h"
 #include "presentation/common/Theme.h"
 
-#include <QFormLayout>
+#include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QTimer>
+#include <QVariantAnimation>
 #include <QVBoxLayout>
+
+namespace {
+
+qreal clamp01(qreal value) {
+    return qBound<qreal>(0.0, value, 1.0);
+}
+
+qreal easeOutCubicValue(qreal value) {
+    const qreal t = 1.0 - clamp01(value);
+    return 1.0 - t * t * t;
+}
+
+qreal easeInCubicValue(qreal value) {
+    const qreal t = clamp01(value);
+    return t * t * t;
+}
+
+qreal interpolate(qreal from, qreal to, qreal progress) {
+    return from + (to - from) * clamp01(progress);
+}
+
+class SettingsGroupHost : public QWidget {
+public:
+    explicit SettingsGroupHost(QWidget *card, QWidget *parent = nullptr)
+        : QWidget(parent), m_card(card)
+    {
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+        m_card->setParent(this);
+        m_effect = new QGraphicsOpacityEffect(m_card);
+        m_card->setGraphicsEffect(m_effect);
+        m_effect->setOpacity(1.0);
+        updateCardGeometry();
+    }
+
+    QVBoxLayout *contentLayout() const {
+        return qobject_cast<QVBoxLayout *>(m_card ? m_card->layout() : nullptr);
+    }
+
+    QSize sizeHint() const override {
+        if (!m_card)
+            return QWidget::sizeHint();
+        const QSize cardHint = m_card->sizeHint();
+        return {cardHint.width(), cardHint.height() + ExtraVPad * 2};
+    }
+
+    QSize minimumSizeHint() const override {
+        return sizeHint();
+    }
+
+    void prepareEnter() {
+        stopAnimation();
+        ++m_generation;
+        setOffset(StartOffset);
+        if (m_effect)
+            m_effect->setOpacity(0.0);
+        show();
+    }
+
+    void playEnter(int delayMs) {
+        stopAnimation();
+        setOffset(StartOffset);
+        if (m_effect)
+            m_effect->setOpacity(0.0);
+
+        const int generation = ++m_generation;
+        QTimer::singleShot(delayMs, this, [this, generation]() {
+            if (generation != m_generation)
+                return;
+
+            m_anim = new QVariantAnimation(this);
+            m_anim->setDuration(EnterMs);
+            m_anim->setEasingCurve(QEasingCurve::Linear);
+            m_anim->setStartValue(0.0);
+            m_anim->setEndValue(1.0);
+            connect(m_anim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+                const qreal t = clamp01(value.toReal());
+                if (m_effect)
+                    m_effect->setOpacity(easeOutCubicValue(t));
+
+                qreal offset = 0.0;
+                if (t < ForwardPart)
+                    offset = interpolate(StartOffset, OvershootOffset, easeOutCubicValue(t / ForwardPart));
+                else
+                    offset = interpolate(OvershootOffset, 0.0,
+                                         easeOutCubicValue((t - ForwardPart) / (1.0 - ForwardPart)));
+                setOffset(offset);
+            });
+            connect(m_anim, &QVariantAnimation::finished, this, [this]() {
+                setOffset(0.0);
+                if (m_effect)
+                    m_effect->setOpacity(1.0);
+                m_anim = nullptr;
+            });
+            m_anim->start(QAbstractAnimation::DeleteWhenStopped);
+        });
+    }
+
+    void prepareExit() {
+        stopAnimation();
+        setOffset(0.0);
+        if (m_effect)
+            m_effect->setOpacity(1.0);
+        show();
+    }
+
+    void playExit() {
+        stopAnimation();
+        setOffset(0.0);
+        if (m_effect)
+            m_effect->setOpacity(1.0);
+
+        m_anim = new QVariantAnimation(this);
+        m_anim->setDuration(ExitFadeMs);
+        m_anim->setEasingCurve(QEasingCurve::Linear);
+        m_anim->setStartValue(0.0);
+        m_anim->setEndValue(1.0);
+        connect(m_anim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            const qreal t = clamp01(value.toReal());
+            if (m_effect)
+                m_effect->setOpacity(1.0 - easeInCubicValue(t));
+        });
+        connect(m_anim, &QVariantAnimation::finished, this, [this]() {
+            if (m_effect)
+                m_effect->setOpacity(0.0);
+            m_anim = nullptr;
+        });
+        m_anim->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+    void restoreVisible() {
+        stopAnimation();
+        setOffset(0.0);
+        if (m_effect)
+            m_effect->setOpacity(1.0);
+    }
+
+    static int delayForIndex(int index) { return index * GroupDelayMs; }
+    static int exitFadeMs() { return ExitFadeMs; }
+
+protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QWidget::resizeEvent(event);
+        updateCardGeometry();
+    }
+
+private:
+    void stopAnimation() {
+        if (m_anim) {
+            m_anim->stop();
+            m_anim->deleteLater();
+            m_anim = nullptr;
+        }
+    }
+
+    void setOffset(qreal offset) {
+        m_offset = offset;
+        updateCardGeometry();
+    }
+
+    void updateCardGeometry() {
+        if (!m_card)
+            return;
+        const int cardH = m_card->sizeHint().height();
+        m_card->setGeometry(0, ExtraVPad + qRound(m_offset), width(), cardH);
+    }
+
+    QWidget *m_card = nullptr;
+    QGraphicsOpacityEffect *m_effect = nullptr;
+    QVariantAnimation *m_anim = nullptr;
+    qreal m_offset = 0.0;
+    int m_generation = 0;
+
+    static constexpr int ExtraVPad = 8;
+
+    static constexpr int GroupDelayMs = 60;
+    static constexpr int EnterMs = 180;
+    static constexpr int ExitFadeMs = 120;
+    static constexpr qreal StartOffset = -24.0;
+    static constexpr qreal OvershootOffset = 6.0;
+    static constexpr qreal ForwardPart = 0.68;
+};
+
+} // namespace
 
 SettingsPanel::SettingsPanel(QWidget *parent)
     : QWidget(parent)
@@ -20,14 +206,8 @@ SettingsPanel::SettingsPanel(QWidget *parent)
 
 void SettingsPanel::setupUi() {
     auto *root = new QVBoxLayout(this);
-    root->setContentsMargins(28, 24, 32, 28);
-    root->setSpacing(18);
-
-    auto *title = new QLabel("设置");
-    title->setStyleSheet(
-        "font-size: 18px; font-weight: 600;"
-        "color: " + QString(Theme::TextPrimary) + ";");
-    root->addWidget(title);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
 
     m_stack = new QStackedWidget;
     m_stack->setStyleSheet("background: transparent;");
@@ -36,22 +216,58 @@ void SettingsPanel::setupUi() {
     root->addWidget(m_stack, 1);
 }
 
+QWidget *SettingsPanel::makeGroup(const QString &title) {
+    auto *group = new QWidget;
+    group->setObjectName("settingsGroup");
+    group->setStyleSheet(
+        "#settingsGroup {"
+        "  background:" + QString(Theme::BgPrimary) + ";"
+        "  border: 1px solid " + Theme::Border + ";"
+        "  border-radius: 8px;"
+        "}");
+
+    auto *root = new QVBoxLayout(group);
+    root->setContentsMargins(16, 14, 16, 14);
+    root->setSpacing(12);
+
+    auto *titleLabel = new QLabel(title, group);
+    titleLabel->setStyleSheet(
+        "font-size: 13px; font-weight: 700;"
+        "color:" + QString(Theme::TextPrimary) + ";"
+        "background: transparent; border: none;");
+    root->addWidget(titleLabel);
+    return new SettingsGroupHost(group);
+}
+
+QWidget *SettingsPanel::makeSettingRow(const QString &label, QWidget *control) {
+    auto *row = new QWidget;
+    row->setObjectName("settingRow");
+    row->setStyleSheet("#settingRow { background: transparent; border: none; }");
+
+    auto *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(16);
+
+    auto *labelWidget = new QLabel(label, row);
+    labelWidget->setMinimumWidth(148);
+    labelWidget->setStyleSheet(
+        "font-size: 13px;"
+        "color:" + QString(Theme::TextSecondary) + ";"
+        "background: transparent; border: none;");
+    layout->addWidget(labelWidget);
+    layout->addWidget(control, 1);
+    return row;
+}
+
 QWidget *SettingsPanel::makePetPage() {
     auto *page = new QWidget;
     auto *root = new QVBoxLayout(page);
-    root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(18);
+    root->setContentsMargins(18, 18, 18, 18);
+    root->setSpacing(12);
 
-    auto *hint = new QLabel("宠物");
-    hint->setStyleSheet(
-        "font-size: 14px; font-weight: 600;"
-        "color: " + QString(Theme::TextPrimary) + ";");
-    root->addWidget(hint);
-
-    auto *form = new QFormLayout;
-    form->setSpacing(16);
-    form->setContentsMargins(0, 0, 0, 0);
-    form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    auto *paramsGroup = makeGroup("宠物参数");
+    m_petGroupHosts.append(paramsGroup);
+    auto *paramsLayout = static_cast<SettingsGroupHost *>(paramsGroup)->contentLayout();
 
     auto *scaleWidget = new QWidget;
     auto *scaleRow = new QHBoxLayout(scaleWidget);
@@ -76,9 +292,49 @@ QWidget *SettingsPanel::makePetPage() {
 
     scaleRow->addWidget(m_petScaleSlider, 1);
     scaleRow->addWidget(m_petScaleLabel);
-    form->addRow("宠物大小", scaleWidget);
+    paramsLayout->addWidget(makeSettingRow("宠物大小", scaleWidget));
 
-    root->addLayout(form);
+    auto *sleepWidget = new QWidget;
+    auto *sleepRow = new QHBoxLayout(sleepWidget);
+    sleepRow->setContentsMargins(0, 0, 0, 0);
+    sleepRow->setSpacing(8);
+
+    m_sleepThresholdSlider = new QSlider(Qt::Horizontal);
+    m_sleepThresholdSlider->setRange(1, 60);
+    m_sleepThresholdSlider->setValue(AppConfig::instance().petSleepThresholdMins());
+
+    m_sleepThresholdLabel = new QLabel(QString("%1 分钟").arg(AppConfig::instance().petSleepThresholdMins()));
+    m_sleepThresholdLabel->setFixedWidth(58);
+    m_sleepThresholdLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    m_sleepThresholdLabel->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+
+    connect(m_sleepThresholdSlider, &QSlider::valueChanged, this, [this](int v) {
+        m_sleepThresholdLabel->setText(QString("%1 分钟").arg(v));
+        AppConfig::instance().setPetSleepThresholdMins(v);
+        AppConfig::instance().save();
+        emit petSleepThresholdChanged(v);
+    });
+
+    sleepRow->addWidget(m_sleepThresholdSlider, 1);
+    sleepRow->addWidget(m_sleepThresholdLabel);
+    paramsLayout->addWidget(makeSettingRow("睡眠状态时间阈值", sleepWidget));
+
+    auto *interactionGroup = makeGroup("交互");
+    m_petGroupHosts.append(interactionGroup);
+    auto *interactionLayout = static_cast<SettingsGroupHost *>(interactionGroup)->contentLayout();
+
+    m_interactionDisabledCheck = new QCheckBox("禁止与宠物交互");
+    m_interactionDisabledCheck->setChecked(AppConfig::instance().petInteractionDisabled());
+    m_interactionDisabledCheck->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
+    connect(m_interactionDisabledCheck, &QCheckBox::toggled, this, [this](bool checked) {
+        AppConfig::instance().setPetInteractionDisabled(checked);
+        AppConfig::instance().save();
+        emit petInteractionDisabledChanged(checked);
+    });
+    interactionLayout->addWidget(makeSettingRow("是否禁止交互", m_interactionDisabledCheck));
+
+    root->addWidget(paramsGroup);
+    root->addWidget(interactionGroup);
     root->addStretch();
     return page;
 }
@@ -86,21 +342,14 @@ QWidget *SettingsPanel::makePetPage() {
 QWidget *SettingsPanel::makeSchedulePage() {
     auto *page = new QWidget;
     auto *root = new QVBoxLayout(page);
-    root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(18);
-
-    auto *hint = new QLabel("日程");
-    hint->setStyleSheet(
-        "font-size: 14px; font-weight: 600;"
-        "color: " + QString(Theme::TextPrimary) + ";");
-    root->addWidget(hint);
-
-    auto *form = new QFormLayout;
-    form->setSpacing(16);
-    form->setContentsMargins(0, 0, 0, 0);
-    form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    root->setContentsMargins(18, 18, 18, 18);
+    root->setSpacing(12);
 
     const bool envSet = !qgetenv("DASHSCOPE_API_KEY").isEmpty();
+
+    auto *apiGroup = makeGroup("API Key");
+    m_scheduleGroupHosts.append(apiGroup);
+    auto *apiLayout = static_cast<SettingsGroupHost *>(apiGroup)->contentLayout();
 
     auto *keyWidget = new QWidget;
     auto *keyVl = new QVBoxLayout(keyWidget);
@@ -140,7 +389,30 @@ QWidget *SettingsPanel::makeSchedulePage() {
         envHint->setWordWrap(true);
         keyVl->addWidget(envHint);
     }
-    form->addRow("API Key", keyWidget);
+    apiLayout->addWidget(makeSettingRow("设置 API Key", keyWidget));
+
+    m_saveBtn = new QPushButton("保存设置");
+    m_saveBtn->setFixedWidth(100);
+    m_saveBtn->setCursor(Qt::PointingHandCursor);
+    m_saveBtn->setStyleSheet(
+        "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
+        "  border-radius: 8px; font-size: 13px; padding: 7px 0; border: none; }"
+        "QPushButton:hover { background: " + Theme::PrimaryDark + "; }");
+    connect(m_saveBtn, &QPushButton::clicked, this, &SettingsPanel::onSave);
+    apiLayout->addWidget(m_saveBtn, 0, Qt::AlignLeft);
+
+    auto *reminderGroup = makeGroup("日程提醒");
+    m_scheduleGroupHosts.append(reminderGroup);
+    auto *reminderLayout = static_cast<SettingsGroupHost *>(reminderGroup)->contentLayout();
+
+    m_reminderCheck = new QCheckBox("启用日程提醒");
+    m_reminderCheck->setChecked(AppConfig::instance().reminderEnabled());
+    m_reminderCheck->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
+    connect(m_reminderCheck, &QCheckBox::toggled, this, [](bool checked) {
+        AppConfig::instance().setReminderEnabled(checked);
+        AppConfig::instance().save();
+    });
+    reminderLayout->addWidget(makeSettingRow("是否启用日程提醒", m_reminderCheck));
 
     auto *volWidget = new QWidget;
     auto *volRow = new QHBoxLayout(volWidget);
@@ -158,29 +430,16 @@ QWidget *SettingsPanel::makeSchedulePage() {
 
     connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int v) {
         m_volumeLabel->setText(QString::number(v));
+        AppConfig::instance().setVolume(v);
+        AppConfig::instance().save();
     });
 
     volRow->addWidget(m_volumeSlider, 1);
     volRow->addWidget(m_volumeLabel);
-    form->addRow("提醒音量", volWidget);
+    reminderLayout->addWidget(makeSettingRow("提醒音量", volWidget));
 
-    m_reminderCheck = new QCheckBox("启用日程提醒");
-    m_reminderCheck->setChecked(AppConfig::instance().reminderEnabled());
-    m_reminderCheck->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
-    form->addRow("日程提醒", m_reminderCheck);
-
-    root->addLayout(form);
-
-    m_saveBtn = new QPushButton("保存设置");
-    m_saveBtn->setFixedWidth(100);
-    m_saveBtn->setCursor(Qt::PointingHandCursor);
-    m_saveBtn->setStyleSheet(
-        "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
-        "  border-radius: 8px; font-size: 13px; padding: 7px 0; border: none; }"
-        "QPushButton:hover { background: " + Theme::PrimaryDark + "; }");
-    connect(m_saveBtn, &QPushButton::clicked, this, &SettingsPanel::onSave);
-    root->addWidget(m_saveBtn, 0, Qt::AlignLeft);
-
+    root->addWidget(apiGroup);
+    root->addWidget(reminderGroup);
     root->addStretch();
     return page;
 }
@@ -188,14 +447,64 @@ QWidget *SettingsPanel::makeSchedulePage() {
 void SettingsPanel::setCategory(int index) {
     if (!m_stack) return;
     m_stack->setCurrentIndex(qBound(0, index, m_stack->count() - 1));
+    prepareGroupsEnter();
+    QTimer::singleShot(0, this, [this]() {
+        playGroupsEnter();
+    });
+}
+
+QVector<QWidget *> SettingsPanel::currentGroupHosts() const {
+    if (!m_stack || m_stack->currentIndex() == 0)
+        return m_petGroupHosts;
+    return m_scheduleGroupHosts;
+}
+
+void SettingsPanel::prepareGroupsEnter() {
+    const QVector<QWidget *> groups = currentGroupHosts();
+    for (QWidget *group : groups) {
+        if (auto *host = static_cast<SettingsGroupHost *>(group))
+            host->prepareEnter();
+    }
+}
+
+void SettingsPanel::playGroupsEnter() {
+    const QVector<QWidget *> groups = currentGroupHosts();
+    for (int i = 0; i < groups.size(); ++i) {
+        if (auto *host = static_cast<SettingsGroupHost *>(groups[i]))
+            host->playEnter(SettingsGroupHost::delayForIndex(i));
+    }
+}
+
+void SettingsPanel::playGroupsExit(const std::function<void()> &finished) {
+    const QVector<QWidget *> groups = currentGroupHosts();
+    if (groups.isEmpty()) {
+        if (finished)
+            finished();
+        return;
+    }
+
+    for (QWidget *group : groups) {
+        if (auto *host = static_cast<SettingsGroupHost *>(group)) {
+            host->prepareExit();
+            host->playExit();
+        }
+    }
+
+    QTimer::singleShot(SettingsGroupHost::exitFadeMs(), this, [this, finished]() {
+        const QVector<QWidget *> groups = currentGroupHosts();
+        for (QWidget *group : groups) {
+            if (auto *host = static_cast<SettingsGroupHost *>(group))
+                host->restoreVisible();
+        }
+        if (finished)
+            finished();
+    });
 }
 
 void SettingsPanel::onSave() {
     AppConfig &cfg = AppConfig::instance();
     if (qgetenv("DASHSCOPE_API_KEY").isEmpty())
         cfg.setApiKey(m_apiKeyEdit->text().trimmed());
-    cfg.setVolume(m_volumeSlider->value());
-    cfg.setReminderEnabled(m_reminderCheck->isChecked());
     cfg.save();
 
     m_saveBtn->setText("保存成功");

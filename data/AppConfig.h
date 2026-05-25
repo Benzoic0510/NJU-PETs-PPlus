@@ -20,6 +20,12 @@ public:
     int petScale() const;
     void setPetScale(int scale);
 
+    int petSleepThresholdMins() const;
+    void setPetSleepThresholdMins(int mins);
+
+    bool petInteractionDisabled() const;
+    void setPetInteractionDisabled(bool disabled);
+
     bool reminderEnabled() const;
     void setReminderEnabled(bool on);
 
@@ -38,6 +44,8 @@ private:
 
     QString m_petId = "Muelsyse";
     int m_petScale = 100;
+    int m_petSleepThresholdMins = 5;
+    bool m_petInteractionDisabled = false;
     bool m_reminderEnabled = true;
     int m_volume = 80;
     QString m_apiKey;

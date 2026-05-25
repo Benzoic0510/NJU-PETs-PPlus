@@ -3,6 +3,7 @@
 //
 
 #include "business/PetStateManager.h"
+#include "data/AppConfig.h"
 
 #include <QRandomGenerator>
 
@@ -16,7 +17,7 @@ PetStateManager::PetStateManager(QObject *parent)
     connect(&m_idleTimer, &QTimer::timeout, this, &PetStateManager::onIdleTick);
 
     m_sleepTimer.setSingleShot(true);
-    m_sleepTimer.setInterval(300000);  // 5 min
+    m_sleepTimer.setInterval(AppConfig::instance().petSleepThresholdMins() * 60 * 1000);
     connect(&m_sleepTimer, &QTimer::timeout, this, &PetStateManager::onSleepTick);
 
     setState("idle");
@@ -70,6 +71,12 @@ void PetStateManager::onManualState(const QString &state) {
 
 void PetStateManager::onSleepWokeUp() {
     onWake();
+}
+
+void PetStateManager::setSleepThresholdMins(int mins) {
+    m_sleepTimer.setInterval(qBound(1, mins, 60) * 60 * 1000);
+    if (m_state != "sleep")
+        resetSleepTimer();
 }
 
 void PetStateManager::onIdleTick() {

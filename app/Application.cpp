@@ -37,6 +37,10 @@ void Application::start() {
 
     connect(m_mainMenu, &MainMenu::petSelected, m_petWidget, &PetWidget::loadPet);
     connect(m_mainMenu, &MainMenu::petScaleChanged, m_petWidget, &PetWidget::setPetScale);
+    connect(m_mainMenu, &MainMenu::petSleepThresholdChanged,
+            &m_petStateManager, &PetStateManager::setSleepThresholdMins);
+    connect(m_mainMenu, &MainMenu::petInteractionDisabledChanged,
+            m_petWidget, &PetWidget::setInteractionDisabled);
 
     // PetWidget ↔ PetStateManager
     connect(m_petWidget, &PetWidget::dragStarted,        &m_petStateManager, &PetStateManager::onDragStarted);
