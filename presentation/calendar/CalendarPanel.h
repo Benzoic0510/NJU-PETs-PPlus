@@ -17,12 +17,17 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include <functional>
+
 class CalendarPanel : public QWidget {
     Q_OBJECT
 
 public:
     explicit CalendarPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr, bool embedContextPanel = true);
     QWidget *contextPanel() const { return m_contextPanel; }
+    void prepareTimelineEnter();
+    void playTimelineEnter();
+    void playTimelineExit(const std::function<void()> &finished);
 
 public slots:
     void refresh();

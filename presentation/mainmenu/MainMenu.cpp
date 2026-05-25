@@ -24,6 +24,7 @@
 #include <QVBoxLayout>
 
 #include <functional>
+#include <memory>
 
 namespace {
 
@@ -475,7 +476,7 @@ public:
         });
         connect(m_scaleAnim, &QVariantAnimation::finished, this, [this, finished]() {
             m_scaleAnim = nullptr;
-            finishAnimation();
+            finishExitAnimation();
             if (finished)
                 finished();
         });
@@ -538,6 +539,16 @@ private:
         m_animating = false;
         if (m_content)
             m_content->show();
+        m_snapshot = QPixmap();
+        setRevealOpacity(1.0);
+        setRevealScale(1.0);
+        update();
+    }
+
+    void finishExitAnimation() {
+        m_animating = false;
+        if (m_content)
+            m_content->hide();
         m_snapshot = QPixmap();
         setRevealOpacity(1.0);
         setRevealScale(1.0);
@@ -691,6 +702,7 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
 
     auto *calendarPanel = new CalendarPanel(svc, nlp, nullptr, false);
     calendarPanel->setStyleSheet("background: transparent;");
+    m_calendarPanel = calendarPanel;
     auto *settingsPanel = new SettingsPanel;
     settingsPanel->setStyleSheet("background: transparent;");
     connect(settingsPanel, &SettingsPanel::petScaleChanged,
@@ -832,6 +844,18 @@ void MainMenu::switchPage(int id) {
     }
 
     m_pageSwitching = true;
+    if (m_currentPage == 1 && m_calendarPanel) {
+        auto remaining = std::make_shared<int>(2);
+        auto finishOne = [this, target, remaining]() {
+            --(*remaining);
+            if (*remaining == 0)
+                completePageSwitch(target);
+        };
+        playContextExit(m_currentPage, finishOne);
+        m_calendarPanel->playTimelineExit(finishOne);
+        return;
+    }
+
     playContextExit(m_currentPage, [this, target]() {
         completePageSwitch(target);
     });
@@ -846,6 +870,9 @@ void MainMenu::completePageSwitch(int id) {
     const int target = qBound(0, id, 3);
     if (target == 1 && m_scheduleReveal)
         static_cast<ContextPopHost *>(m_scheduleReveal)->preparePop();
+    if (target == 1 && m_calendarPanel)
+        m_calendarPanel->prepareTimelineEnter();
+    prepareRightSurfaceEnter(target);
 
     m_stack->setCurrentIndex(target);
     m_contextStack->setCurrentIndex(target);
@@ -855,6 +882,13 @@ void MainMenu::completePageSwitch(int id) {
     animateContextWidth(ContextWidths[target]);
     m_currentPage = target;
     playContextEnter(target);
+    playRightSurfaceEnter(target);
+    if (target == 1 && m_calendarPanel) {
+        QTimer::singleShot(40, m_calendarPanel, [this]() {
+            if (m_currentPage == 1 && m_calendarPanel)
+                m_calendarPanel->playTimelineEnter();
+        });
+    }
     m_pageSwitching = false;
 }
 
@@ -904,6 +938,97 @@ void MainMenu::animateContextWidth(int targetWidth) {
     m_contextWidthAnim->setStartValue(m_contextPanel->width());
     m_contextWidthAnim->setEndValue(targetWidth);
     m_contextWidthAnim->start();
+}
+
+void MainMenu::prepareRightSurfaceEnter(int id) {
+    if (!m_rightSurface)
+        return;
+
+    if (m_rightSurfaceHeightAnim) {
+        m_rightSurfaceHeightAnim->stop();
+        m_rightSurfaceHeightAnim->deleteLater();
+        m_rightSurfaceHeightAnim = nullptr;
+    }
+
+    if (id == 1) {
+        setRightSurfaceTopAligned(true);
+        m_rightSurface->setFixedHeight(0);
+    } else {
+        setRightSurfaceTopAligned(false);
+        m_rightSurface->setMinimumHeight(0);
+        m_rightSurface->setMaximumHeight(QWIDGETSIZE_MAX);
+    }
+}
+
+void MainMenu::playRightSurfaceEnter(int id) {
+    if (!m_rightSurface)
+        return;
+
+    if (id != 1) {
+        m_rightSurface->setMinimumHeight(0);
+        m_rightSurface->setMaximumHeight(QWIDGETSIZE_MAX);
+        return;
+    }
+
+    QTimer::singleShot(40, m_rightSurface, [this]() {
+        if (m_currentPage != 1 || !m_rightSurface)
+            return;
+
+        const QWidget *wrap = m_rightSurface->parentWidget();
+        int targetHeight = qMax(0, height() - 92);
+        if (wrap) {
+            targetHeight = wrap->height();
+            if (auto *layout = wrap->layout()) {
+                const QMargins margins = layout->contentsMargins();
+                targetHeight -= margins.top() + margins.bottom();
+            }
+        }
+        targetHeight = qMax(0, targetHeight);
+        if (targetHeight <= 0) {
+            m_rightSurface->setMinimumHeight(0);
+            m_rightSurface->setMaximumHeight(QWIDGETSIZE_MAX);
+            return;
+        }
+
+        if (m_rightSurfaceHeightAnim) {
+            m_rightSurfaceHeightAnim->stop();
+            m_rightSurfaceHeightAnim->deleteLater();
+        }
+
+        m_rightSurfaceHeightAnim = new QVariantAnimation(this);
+        m_rightSurfaceHeightAnim->setDuration(240);
+        m_rightSurfaceHeightAnim->setEasingCurve(QEasingCurve::OutCubic);
+        m_rightSurfaceHeightAnim->setStartValue(m_rightSurface->height());
+        m_rightSurfaceHeightAnim->setEndValue(targetHeight);
+        connect(m_rightSurfaceHeightAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            if (m_rightSurface)
+                m_rightSurface->setFixedHeight(value.toInt());
+        });
+        connect(m_rightSurfaceHeightAnim, &QVariantAnimation::finished, this, [this, targetHeight]() {
+            if (m_currentPage == 1 && m_rightSurface) {
+                m_rightSurface->setFixedHeight(targetHeight);
+                m_rightSurface->setMaximumHeight(QWIDGETSIZE_MAX);
+                m_rightSurface->setMinimumHeight(0);
+                setRightSurfaceTopAligned(false);
+            }
+            m_rightSurfaceHeightAnim = nullptr;
+        });
+        m_rightSurfaceHeightAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    });
+}
+
+void MainMenu::setRightSurfaceTopAligned(bool aligned) {
+    if (!m_rightSurface || !m_rightSurface->parentWidget())
+        return;
+
+    auto *layout = m_rightSurface->parentWidget()->layout();
+    if (!layout)
+        return;
+
+    if (auto *item = layout->itemAt(0)) {
+        item->setAlignment(aligned ? Qt::AlignTop : Qt::Alignment());
+        layout->invalidate();
+    }
 }
 
 void MainMenu::updatePetContext(const QString &petId) {

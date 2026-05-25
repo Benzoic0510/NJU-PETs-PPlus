@@ -22,6 +22,28 @@ static const EventColor EVENT_COLORS[4] = {
     {Theme::EventAmberFg,  Theme::EventAmberBg,  Theme::EventAmberBar },
 };
 
+namespace {
+
+qreal clamp01(qreal value) {
+    return qBound<qreal>(0.0, value, 1.0);
+}
+
+qreal easeOutCubic(qreal value) {
+    const qreal t = 1.0 - clamp01(value);
+    return 1.0 - t * t * t;
+}
+
+qreal easeInCubic(qreal value) {
+    const qreal t = clamp01(value);
+    return t * t * t;
+}
+
+qreal lerp(qreal from, qreal to, qreal progress) {
+    return from + (to - from) * clamp01(progress);
+}
+
+} // namespace
+
 // ── TimelineCanvas ────────────────────────────────────────────────────────────
 
 TimelineCanvas::TimelineCanvas(QWidget *parent)
@@ -47,6 +69,65 @@ void TimelineCanvas::setSchedules(const QDate &date, const QVector<Schedule> &sc
     m_schedules = schedules;
     rebuildCards();
     update();
+}
+
+void TimelineCanvas::prepareEnter() {
+    stopLayerAnimation();
+    m_layerAnimMode = LayerAnimMode::Enter;
+    m_layerAnimTime = 0.0;
+    update();
+}
+
+void TimelineCanvas::playEnter() {
+    stopLayerAnimation();
+    m_layerAnimMode = LayerAnimMode::Enter;
+    m_layerAnimTime = 0.0;
+    update();
+
+    const int totalMs = EnterLayerMs + (LayerCount - 1) * LayerDelayMs;
+    m_layerAnim = new QVariantAnimation(this);
+    m_layerAnim->setDuration(totalMs);
+    m_layerAnim->setEasingCurve(QEasingCurve::Linear);
+    m_layerAnim->setStartValue(0.0);
+    m_layerAnim->setEndValue(static_cast<qreal>(totalMs));
+    connect(m_layerAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+        m_layerAnimTime = value.toReal();
+        update();
+    });
+    connect(m_layerAnim, &QVariantAnimation::finished, this, [this]() {
+        m_layerAnim = nullptr;
+        m_layerAnimMode = LayerAnimMode::None;
+        m_layerAnimTime = 0.0;
+        update();
+    });
+    m_layerAnim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void TimelineCanvas::playExit(const std::function<void()> &finished) {
+    stopLayerAnimation();
+    m_layerAnimMode = LayerAnimMode::Exit;
+    m_layerAnimTime = 0.0;
+    update();
+
+    const int totalMs = ExitFadeMs;
+    m_layerAnim = new QVariantAnimation(this);
+    m_layerAnim->setDuration(totalMs);
+    m_layerAnim->setEasingCurve(QEasingCurve::Linear);
+    m_layerAnim->setStartValue(0.0);
+    m_layerAnim->setEndValue(static_cast<qreal>(totalMs));
+    connect(m_layerAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+        m_layerAnimTime = value.toReal();
+        update();
+    });
+    connect(m_layerAnim, &QVariantAnimation::finished, this, [this, finished]() {
+        m_layerAnim = nullptr;
+        m_layerAnimMode = LayerAnimMode::Exit;
+        m_layerAnimTime = static_cast<qreal>(ExitFadeMs);
+        update();
+        if (finished)
+            finished();
+    });
+    m_layerAnim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void TimelineCanvas::rebuildCards() {
@@ -105,6 +186,32 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
+    if (m_layerAnimMode == LayerAnimMode::None) {
+        drawTimelineContent(p);
+        return;
+    }
+
+    if (m_layerAnimMode == LayerAnimMode::Exit) {
+        p.setOpacity(layerOpacity(0));
+        drawTimelineContent(p);
+        return;
+    }
+
+    for (int layer = 0; layer < LayerCount; ++layer) {
+        const qreal opacity = layerOpacity(layer);
+        if (opacity <= 0.0)
+            continue;
+
+        p.save();
+        p.setClipRect(layerRect(layer));
+        p.setOpacity(opacity);
+        p.translate(0.0, layerOffset(layer));
+        drawTimelineContent(p);
+        p.restore();
+    }
+}
+
+void TimelineCanvas::drawTimelineContent(QPainter &p) {
     const int w = width();
 
     // ── 小时线 + 时间标签 ─────────────────────────────────
@@ -194,7 +301,50 @@ void TimelineCanvas::paintEvent(QPaintEvent *) {
     }
 }
 
+void TimelineCanvas::stopLayerAnimation() {
+    if (m_layerAnim) {
+        m_layerAnim->stop();
+        m_layerAnim->deleteLater();
+        m_layerAnim = nullptr;
+    }
+}
+
+QRect TimelineCanvas::layerRect(int layer) const {
+    const int top = layer == 0
+        ? 0
+        : TopPad + layer * SlotH - 8;
+    const int bottom = layer == LayerCount - 1
+        ? height()
+        : TopPad + (layer + 1) * SlotH - 8;
+    return QRect(0, top, width(), qMax(0, bottom - top));
+}
+
+qreal TimelineCanvas::layerLocalProgress(int layer) const {
+    const int spanMs = m_layerAnimMode == LayerAnimMode::Exit ? ExitFadeMs : EnterLayerMs;
+    return clamp01((m_layerAnimTime - layer * LayerDelayMs) / spanMs);
+}
+
+qreal TimelineCanvas::layerOpacity(int layer) const {
+    const qreal local = layerLocalProgress(layer);
+    if (m_layerAnimMode == LayerAnimMode::Exit)
+        return 1.0 - easeInCubic(local);
+    return easeOutCubic(local);
+}
+
+qreal TimelineCanvas::layerOffset(int layer) const {
+    const qreal local = layerLocalProgress(layer);
+    if (m_layerAnimMode == LayerAnimMode::Exit)
+        return 0.0;
+
+    if (local < 0.68)
+        return lerp(-12.0, 8.0, easeOutCubic(local / 0.68));
+    return lerp(8.0, 0.0, easeOutCubic((local - 0.68) / 0.32));
+}
+
 void TimelineCanvas::mousePressEvent(QMouseEvent *event) {
+    if (m_layerAnimMode != LayerAnimMode::None)
+        return;
+
     const QPoint pos = event->position().toPoint();
     // DDL 渲染在最上层，优先命中
     for (const CardInfo &card : m_cards) {
@@ -248,4 +398,21 @@ void TimelineView::setSchedules(const QDate &date, const QVector<Schedule> &sche
         });
     }
     // 同一天的增删改：保持滚动位置不动
+}
+
+void TimelineView::prepareEnter() {
+    if (m_canvas)
+        m_canvas->prepareEnter();
+}
+
+void TimelineView::playEnter() {
+    if (m_canvas)
+        m_canvas->playEnter();
+}
+
+void TimelineView::playExit(const std::function<void()> &finished) {
+    if (m_canvas)
+        m_canvas->playExit(finished);
+    else if (finished)
+        finished();
 }

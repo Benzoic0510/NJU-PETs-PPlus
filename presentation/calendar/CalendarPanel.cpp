@@ -166,6 +166,23 @@ void CalendarPanel::refresh() {
     updateUpcoming();
 }
 
+void CalendarPanel::prepareTimelineEnter() {
+    if (m_timeline)
+        m_timeline->prepareEnter();
+}
+
+void CalendarPanel::playTimelineEnter() {
+    if (m_timeline)
+        m_timeline->playEnter();
+}
+
+void CalendarPanel::playTimelineExit(const std::function<void()> &finished) {
+    if (m_timeline)
+        m_timeline->playExit(finished);
+    else if (finished)
+        finished();
+}
+
 void CalendarPanel::loadDay(const QDate &date) {
     m_selDate = date;
     m_miniCal->selectDate(date);

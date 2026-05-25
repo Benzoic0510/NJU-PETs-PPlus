@@ -19,6 +19,8 @@
 
 #include <functional>
 
+class CalendarPanel;
+
 class MainMenu : public QWidget {
     Q_OBJECT
 
@@ -47,6 +49,9 @@ private:
     void         playContextExit(int id, const std::function<void()> &finished);
     void         playContextEnter(int id);
     void         animateContextWidth(int targetWidth);
+    void         prepareRightSurfaceEnter(int id);
+    void         playRightSurfaceEnter(int id);
+    void         setRightSurfaceTopAligned(bool aligned);
     void         updatePetContext(const QString &petId);
     void         updateRightSurfaceStyle(int pageId);
 
@@ -58,7 +63,9 @@ private:
     QWidget        *m_titleBar = nullptr;
     QWidget        *m_petReveal = nullptr;
     QWidget        *m_scheduleReveal = nullptr;
+    CalendarPanel  *m_calendarPanel = nullptr;
     QVariantAnimation *m_contextWidthAnim = nullptr;
+    QVariantAnimation *m_rightSurfaceHeightAnim = nullptr;
     int             m_currentPage = 0;
     bool            m_pageSwitching = false;
     bool            m_dragging = false;

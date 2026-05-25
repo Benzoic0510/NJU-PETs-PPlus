@@ -140,25 +140,32 @@ void MiniCalendar::paintEvent(QPaintEvent *) {
             const bool   isThisMonth = (date.month() == m_month.month() && date.year() == m_month.year());
             const bool   isToday     = (date == today);
             const bool   isSelected  = (date == m_selected);
+            const bool   selectedToday = isSelected && isToday;
             const bool   hasEvent    = m_eventDates.contains(date);
 
             // 背景圆
             const double circR = qMin(r.width(), r.height()) / 2.0 - 2.0;
-            p.setPen(Qt::NoPen);
-            if (isSelected) {
+            if (selectedToday) {
+                p.setPen(Qt::NoPen);
                 p.setBrush(QColor(Theme::Primary));
                 p.drawEllipse(r.center(), circR, circR);
-            } else if (isToday) {
-                p.setBrush(QColor(Theme::PrimaryBg));
+            } else if (isSelected) {
+                QPen selectedPen(QColor(Theme::Primary), 1.5);
+                p.setPen(selectedPen);
+                p.setBrush(Qt::NoBrush);
                 p.drawEllipse(r.center(), circR, circR);
             }
 
             // 数字（稍微上移为小圆点留空）
-            if (isSelected)       p.setPen(QColor(Theme::BgPrimary));
-            else if (isToday)     p.setPen(QColor(Theme::PrimaryDark));
+            if (selectedToday)    p.setPen(QColor(Theme::BgPrimary));
+            else if (isSelected)  p.setPen(QColor(Theme::Primary));
+            else if (isToday)     p.setPen(QColor(Theme::Primary));
             else if (isThisMonth) p.setPen(QColor(Theme::TextSecondary));
             else                  p.setPen(QColor(Theme::TextTertiary));
 
+            QFont cellFont = dayFont;
+            cellFont.setBold(isToday);
+            p.setFont(cellFont);
             p.setOpacity(isThisMonth ? 1.0 : 0.45);
             p.drawText(r.adjusted(0, -4, 0, -4), Qt::AlignCenter, QString::number(date.day()));
             p.setOpacity(1.0);
@@ -168,15 +175,15 @@ void MiniCalendar::paintEvent(QPaintEvent *) {
             p.setPen(Qt::NoPen);
             if (hasEvent && hasDDL) {
                 // 双点：左紫（事件）右红（DDL）
-                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::PrimaryMid));
+                p.setBrush(selectedToday ? QColor(Theme::BgPrimary) : QColor(Theme::PrimaryMid));
                 p.drawEllipse(QPointF(r.center().x() - 4.0, r.bottom() - 4.0), 2.0, 2.0);
-                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::EventCoralBar));
+                p.setBrush(selectedToday ? QColor(Theme::BgPrimary) : QColor(Theme::EventCoralBar));
                 p.drawEllipse(QPointF(r.center().x() + 4.0, r.bottom() - 4.0), 2.0, 2.0);
             } else if (hasDDL) {
-                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::EventCoralBar));
+                p.setBrush(selectedToday ? QColor(Theme::BgPrimary) : QColor(Theme::EventCoralBar));
                 p.drawEllipse(QPointF(r.center().x(), r.bottom() - 4.0), 2.0, 2.0);
             } else if (hasEvent) {
-                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::PrimaryMid));
+                p.setBrush(selectedToday ? QColor(Theme::BgPrimary) : QColor(Theme::PrimaryMid));
                 p.drawEllipse(QPointF(r.center().x(), r.bottom() - 4.0), 2.0, 2.0);
             }
         }
