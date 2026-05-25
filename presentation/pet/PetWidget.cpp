@@ -3,21 +3,13 @@
 //
 
 #include "presentation/pet/PetWidget.h"
+#include "presentation/pet/SkinManifest.h"
 #include "data/AppConfig.h"
 
 #include <QGuiApplication>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QScreen>
-
-namespace {
-struct GridInfo { int rows; int cols; };
-// 已知非「单行横排」布局的精灵图；查不到则走 Animator 自动推断
-GridInfo gridFor(const QString &petId, const QString &state) {
-    if (petId == "Muelsyse" && state == "idle") return {6, 10};
-    return {1, 0};
-}
-}
 
 PetWidget::PetWidget(QWidget *parent)
     : QWidget(parent)
@@ -31,7 +23,7 @@ PetWidget::PetWidget(QWidget *parent)
 
     connect(&m_animator, &Animator::frameChanged, this, QOverload<>::of(&QWidget::update));
     {
-        const auto g = gridFor(m_petId, "idle");
+            const auto g = SkinManifest::instance().gridFor(m_petId, "idle");
         m_animator.load(m_petId, "idle", g.rows, g.cols);
     }
 
@@ -45,19 +37,19 @@ PetWidget::PetWidget(QWidget *parent)
 
     // 动作子菜单
     connect(&m_actionMenu, &RadialMenu::triggered, this, [this](int idx) {
-        const QStringList states{"idle", "walk", "interact", "sleep"};
+        const QStringList states{"idle", "greet", "sleep"};
         if (idx < states.size()) emit animationRequested(states[idx]);
     });
 }
 
 void PetWidget::loadPet(const QString &petId) {
     m_petId = petId;
-    const auto g = gridFor(m_petId, "idle");
+    const auto g = SkinManifest::instance().gridFor(m_petId, "idle");
     m_animator.load(m_petId, "idle", g.rows, g.cols);
 }
 
 void PetWidget::onStateChanged(const QString &state) {
-    const auto g = gridFor(m_petId, state);
+    const auto g = SkinManifest::instance().gridFor(m_petId, state);
     m_animator.load(m_petId, state, g.rows, g.cols);
 }
 
@@ -76,7 +68,7 @@ void PetWidget::showMainMenu(QPoint /*globalPos*/) {
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_actionMenu.popup(center, {{"闲置", "😴"}, {"行走", "🚶"}, {"互动", "✨"}, {"睡眠", "🌙"}});
+    m_actionMenu.popup(center, {{"待机", "😴"}, {"互动", "✨"}, {"睡觉", "🌙"}});
 }
 
 void PetWidget::paintEvent(QPaintEvent *) {

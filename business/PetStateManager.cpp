@@ -14,7 +14,12 @@ PetStateManager::PetStateManager(QObject *parent)
 
     m_idleTimer.setInterval(40000);
     connect(&m_idleTimer, &QTimer::timeout, this, &PetStateManager::onIdleTick);
-    m_idleTimer.start();
+
+    m_sleepTimer.setSingleShot(true);
+    m_sleepTimer.setInterval(300000);  // 5 min
+    connect(&m_sleepTimer, &QTimer::timeout, this, &PetStateManager::onSleepTick);
+
+    setState("idle");
 }
 
 QString PetStateManager::currentState() const {
@@ -23,22 +28,24 @@ QString PetStateManager::currentState() const {
 
 void PetStateManager::onDragStarted() {
     m_returnTimer.stop();
-    setState("drag");
+    resetSleepTimer();
+    setState("idle");
 }
 
 void PetStateManager::onDragEnded() {
+    resetSleepTimer();
     setState("idle");
 }
 
 void PetStateManager::onInteract() {
     m_returnTimer.stop();
-    setState("interact");
-    m_returnTimer.start(3000);
+    setState("greet");
+    m_returnTimer.start(8000);
 }
 
 void PetStateManager::onRemind() {
     m_returnTimer.stop();
-    setState("interact");
+    setState("greet");
     m_returnTimer.start(5000);
 }
 
@@ -58,23 +65,32 @@ void PetStateManager::onManualState(const QString &state) {
 }
 
 void PetStateManager::onIdleTick() {
-    // 30% walk 8s, 15% sleep, 55% stay idle
+    // 30% greet 8s, 70% stay idle
     const int r = QRandomGenerator::global()->bounded(20);
     if (r < 6) {
         m_returnTimer.stop();
-        setState("walk");
+        setState("greet");
         m_returnTimer.start(8000);
-    } else if (r < 9) {
-        onSleep();
     }
+}
+
+void PetStateManager::onSleepTick() {
+    onSleep();
 }
 
 void PetStateManager::setState(const QString &state) {
     if (m_state == state) return;
     m_state = state;
-    if (state == "idle")
-        m_idleTimer.start();
-    else
+    if (state == "sleep") {
         m_idleTimer.stop();
+        m_sleepTimer.stop();
+    } else {
+        m_idleTimer.start();
+        m_sleepTimer.start();
+    }
     emit stateChanged(m_state);
+}
+
+void PetStateManager::resetSleepTimer() {
+    m_sleepTimer.start();
 }

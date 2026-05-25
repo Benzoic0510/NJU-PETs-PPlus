@@ -31,13 +31,16 @@ signals:
 
 private slots:
     void onIdleTick();
+    void onSleepTick();
 
 private:
     void setState(const QString &state);
+    void resetSleepTimer();
 
     QString m_state = "idle";
     QTimer  m_returnTimer;
     QTimer  m_idleTimer;
+    QTimer  m_sleepTimer;
 };
 
 #endif //PETSTATEMANAGER_H

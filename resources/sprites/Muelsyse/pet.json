@@ -1,0 +1,8 @@
+{
+  "name": "Muelsyse",
+  "states": {
+    "idle":  { "rows": 6, "cols": 10 },
+    "greet": { "rows": 6, "cols": 10 },
+    "sleep": { "rows": 6, "cols": 10 }
+  }
+}

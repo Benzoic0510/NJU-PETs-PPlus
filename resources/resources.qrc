@@ -1,6 +1,9 @@
 <RCC>
     <qresource prefix="/">
         <file>sprites/Muelsyse/idle.png</file>
+        <file>sprites/Muelsyse/greet.png</file>
+        <file>sprites/Muelsyse/sleep.png</file>
+        <file>sprites/Muelsyse/pet.json</file>
         <file>sprites/Muelsyse/Muelsyse.png</file>
     </qresource>
 </RCC>
