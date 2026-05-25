@@ -40,7 +40,7 @@ void CalendarPanel::setupUi(NLPService *nlp, bool embedContextPanel) {
     // ══════════════════════════════════════════════════════════
     auto *left = new QWidget;
     m_contextPanel = left;
-    left->setFixedWidth(260);
+    left->setFixedWidth(320);
     left->setObjectName("calLeft");
     left->setStyleSheet("#calLeft { background: transparent; border: none; }");
 

@@ -18,8 +18,12 @@
 #include <QPixmap>
 #include <QPropertyAnimation>
 #include <QScrollArea>
+#include <QSignalBlocker>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QVBoxLayout>
+
+#include <functional>
 
 namespace {
 
@@ -197,6 +201,359 @@ private:
     QPropertyAnimation *m_hoverAnim = nullptr;
 };
 
+class PetRevealWidget : public QWidget {
+    Q_OBJECT
+    Q_PROPERTY(qreal revealScale READ revealScale WRITE setRevealScale)
+    Q_PROPERTY(qreal revealOpacity READ revealOpacity WRITE setRevealOpacity)
+
+public:
+    explicit PetRevealWidget(QWidget *parent = nullptr)
+        : QWidget(parent)
+    {
+        setMinimumHeight(300);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    }
+
+    qreal revealScale() const { return m_revealScale; }
+    qreal revealOpacity() const { return m_revealOpacity; }
+
+    void setRevealScale(qreal scale) {
+        m_revealScale = scale;
+        update();
+    }
+
+    void setRevealOpacity(qreal opacity) {
+        m_revealOpacity = qBound<qreal>(0.0, opacity, 1.0);
+        update();
+    }
+
+    void setPet(const QString &petId) {
+        m_petName = petId;
+        m_petImage = QPixmap(QString(":/sprites/%1/%1.png").arg(petId));
+        update();
+    }
+
+    void playPop() {
+        stopAnimations();
+
+        setRevealScale(0.82);
+        setRevealOpacity(0.0);
+
+        m_scaleAnim = new QVariantAnimation(this);
+        m_scaleAnim->setDuration(400);
+        m_scaleAnim->setEasingCurve(QEasingCurve::OutCubic);
+        m_scaleAnim->setKeyValueAt(0.0, 0.94);
+        m_scaleAnim->setKeyValueAt(0.6, 1.03);
+        m_scaleAnim->setKeyValueAt(1.0, 1.0);
+        connect(m_scaleAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealScale(value.toReal());
+        });
+        connect(m_scaleAnim, &QVariantAnimation::finished, this, [this]() {
+            setRevealScale(1.0);
+            m_scaleAnim = nullptr;
+        });
+        m_scaleAnim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_opacityAnim = new QVariantAnimation(this);
+        m_opacityAnim->setDuration(260);
+        m_opacityAnim->setEasingCurve(QEasingCurve::OutCubic);
+        m_opacityAnim->setStartValue(0.0);
+        m_opacityAnim->setEndValue(1.0);
+        connect(m_opacityAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealOpacity(value.toReal());
+        });
+        connect(m_opacityAnim, &QVariantAnimation::finished, this, [this]() {
+            setRevealOpacity(1.0);
+            m_opacityAnim = nullptr;
+        });
+        m_opacityAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+    void playExit(const std::function<void()> &finished) {
+        stopAnimations();
+        setRevealScale(1.0);
+        setRevealOpacity(1.0);
+
+        m_scaleAnim = new QVariantAnimation(this);
+        m_scaleAnim->setDuration(120);
+        m_scaleAnim->setEasingCurve(QEasingCurve::InCubic);
+        m_scaleAnim->setStartValue(1.0);
+        m_scaleAnim->setEndValue(0.92);
+        connect(m_scaleAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealScale(value.toReal());
+        });
+        connect(m_scaleAnim, &QVariantAnimation::finished, this, [this, finished]() {
+            setRevealScale(1.0);
+            setRevealOpacity(1.0);
+            m_scaleAnim = nullptr;
+            if (finished)
+                finished();
+        });
+        m_scaleAnim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_opacityAnim = new QVariantAnimation(this);
+        m_opacityAnim->setDuration(180);
+        m_opacityAnim->setEasingCurve(QEasingCurve::InCubic);
+        m_opacityAnim->setStartValue(1.0);
+        m_opacityAnim->setEndValue(0.0);
+        connect(m_opacityAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealOpacity(value.toReal());
+        });
+        connect(m_opacityAnim, &QVariantAnimation::finished, this, [this]() {
+            m_opacityAnim = nullptr;
+        });
+        m_opacityAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setRenderHint(QPainter::SmoothPixmapTransform);
+        p.setOpacity(m_revealOpacity);
+
+        const QPointF center(width() / 2.0, height() / 2.0);
+        p.translate(center);
+        p.scale(m_revealScale, m_revealScale);
+        p.translate(-center);
+
+        const int imageSide = 190;
+        const QRect imageRect((width() - imageSide) / 2, 10, imageSide, imageSide);
+        if (!m_petImage.isNull()) {
+            p.drawPixmap(imageRect, m_petImage.scaled(
+                imageRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        } else {
+            p.setPen(QColor(Theme::TextTertiary));
+            QFont fallbackFont = p.font();
+            fallbackFont.setPointSize(13);
+            fallbackFont.setBold(true);
+            p.setFont(fallbackFont);
+            p.drawText(imageRect, Qt::AlignCenter, "NJU-PETs++");
+        }
+
+        QFont nameFont = p.font();
+        nameFont.setPointSize(15);
+        nameFont.setBold(true);
+        p.setFont(nameFont);
+        p.setPen(QColor(Theme::TextPrimary));
+        p.drawText(QRect(0, 214, width(), 24), Qt::AlignCenter, m_petName);
+
+        QFont hintFont = p.font();
+        hintFont.setPointSize(9);
+        hintFont.setBold(false);
+        p.setFont(hintFont);
+        p.setPen(QColor(Theme::TextTertiary));
+        p.drawText(QRect(18, 246, width() - 36, 42),
+                   Qt::AlignCenter | Qt::TextWordWrap,
+                   "在右侧切换桌宠形象");
+    }
+
+private:
+    void stopAnimations() {
+        if (m_scaleAnim) {
+            m_scaleAnim->stop();
+            m_scaleAnim->deleteLater();
+            m_scaleAnim = nullptr;
+        }
+        if (m_opacityAnim) {
+            m_opacityAnim->stop();
+            m_opacityAnim->deleteLater();
+            m_opacityAnim = nullptr;
+        }
+    }
+
+    QString m_petName;
+    QPixmap m_petImage;
+    qreal m_revealScale = 1.0;
+    qreal m_revealOpacity = 1.0;
+    QVariantAnimation *m_scaleAnim = nullptr;
+    QVariantAnimation *m_opacityAnim = nullptr;
+};
+
+class ContextPopHost : public QWidget {
+public:
+    explicit ContextPopHost(QWidget *content, QWidget *parent = nullptr)
+        : QWidget(parent), m_content(content)
+    {
+        auto *root = new QVBoxLayout(this);
+        root->setContentsMargins(0, 0, 0, 0);
+        root->setSpacing(0);
+        root->addWidget(m_content);
+    }
+
+    qreal revealScale() const { return m_revealScale; }
+    qreal revealOpacity() const { return m_revealOpacity; }
+
+    void setRevealScale(qreal scale) {
+        m_revealScale = scale;
+        update();
+    }
+
+    void setRevealOpacity(qreal opacity) {
+        m_revealOpacity = qBound<qreal>(0.0, opacity, 1.0);
+        update();
+    }
+
+    void playPop() {
+        if (!m_content || width() <= 0 || height() <= 0)
+            return;
+
+        stopAnimation();
+        m_content->show();
+        m_snapshotRect = m_content->geometry();
+        m_snapshot = m_content->grab();
+        if (m_snapshot.isNull() || m_snapshotRect.isEmpty()) {
+            m_content->show();
+            return;
+        }
+
+        m_animating = true;
+        m_content->hide();
+        setRevealScale(0.94);
+        setRevealOpacity(0.0);
+
+        m_scaleAnim = new QVariantAnimation(this);
+        m_scaleAnim->setDuration(400);
+        m_scaleAnim->setEasingCurve(QEasingCurve::OutCubic);
+        m_scaleAnim->setKeyValueAt(0.0, 0.94);
+        m_scaleAnim->setKeyValueAt(0.4, 1.02);
+        m_scaleAnim->setKeyValueAt(1.0, 1.0);
+        connect(m_scaleAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealScale(value.toReal());
+        });
+        connect(m_scaleAnim, &QVariantAnimation::finished, this, [this]() {
+            setRevealScale(1.0);
+            finishAnimation();
+            m_scaleAnim = nullptr;
+        });
+        m_scaleAnim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_opacityAnim = new QVariantAnimation(this);
+        m_opacityAnim->setDuration(260);
+        m_opacityAnim->setEasingCurve(QEasingCurve::OutCubic);
+        m_opacityAnim->setStartValue(0.0);
+        m_opacityAnim->setEndValue(1.0);
+        connect(m_opacityAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealOpacity(value.toReal());
+        });
+        connect(m_opacityAnim, &QVariantAnimation::finished, this, [this]() {
+            setRevealOpacity(1.0);
+            m_opacityAnim = nullptr;
+        });
+        m_opacityAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+    void playExit(const std::function<void()> &finished) {
+        if (!m_content || width() <= 0 || height() <= 0) {
+            if (finished)
+                finished();
+            return;
+        }
+
+        stopAnimation();
+        m_content->show();
+        m_snapshotRect = m_content->geometry();
+        m_snapshot = m_content->grab();
+        if (m_snapshot.isNull() || m_snapshotRect.isEmpty()) {
+            if (finished)
+                finished();
+            return;
+        }
+
+        m_animating = true;
+        m_content->hide();
+        setRevealScale(1.0);
+        setRevealOpacity(1.0);
+
+        m_scaleAnim = new QVariantAnimation(this);
+        m_scaleAnim->setDuration(120);
+        m_scaleAnim->setEasingCurve(QEasingCurve::InCubic);
+        m_scaleAnim->setStartValue(1.0);
+        m_scaleAnim->setEndValue(0.92);
+        connect(m_scaleAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealScale(value.toReal());
+        });
+        connect(m_scaleAnim, &QVariantAnimation::finished, this, [this, finished]() {
+            m_scaleAnim = nullptr;
+            finishAnimation();
+            if (finished)
+                finished();
+        });
+        m_scaleAnim->start(QAbstractAnimation::DeleteWhenStopped);
+
+        m_opacityAnim = new QVariantAnimation(this);
+        m_opacityAnim->setDuration(180);
+        m_opacityAnim->setEasingCurve(QEasingCurve::InCubic);
+        m_opacityAnim->setStartValue(1.0);
+        m_opacityAnim->setEndValue(0.0);
+        connect(m_opacityAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant &value) {
+            setRevealOpacity(value.toReal());
+        });
+        connect(m_opacityAnim, &QVariantAnimation::finished, this, [this]() {
+            m_opacityAnim = nullptr;
+        });
+        m_opacityAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+    void preparePop() {
+        stopAnimation();
+        if (m_content)
+            m_content->hide();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *event) override {
+        QWidget::paintEvent(event);
+        if (!m_animating || m_snapshot.isNull())
+            return;
+
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setRenderHint(QPainter::SmoothPixmapTransform);
+        p.setOpacity(m_revealOpacity);
+
+        const QPoint center = m_snapshotRect.center();
+        p.translate(center);
+        p.scale(m_revealScale, m_revealScale);
+        p.translate(-center);
+        p.drawPixmap(m_snapshotRect.topLeft(), m_snapshot);
+    }
+
+private:
+    void stopAnimation() {
+        if (m_scaleAnim) {
+            m_scaleAnim->stop();
+            m_scaleAnim->deleteLater();
+            m_scaleAnim = nullptr;
+        }
+        if (m_opacityAnim) {
+            m_opacityAnim->stop();
+            m_opacityAnim->deleteLater();
+            m_opacityAnim = nullptr;
+        }
+        finishAnimation();
+    }
+
+    void finishAnimation() {
+        m_animating = false;
+        if (m_content)
+            m_content->show();
+        m_snapshot = QPixmap();
+        setRevealOpacity(1.0);
+        setRevealScale(1.0);
+        update();
+    }
+
+    QWidget *m_content = nullptr;
+    QPixmap m_snapshot;
+    QRect m_snapshotRect;
+    qreal m_revealScale = 1.0;
+    qreal m_revealOpacity = 1.0;
+    bool m_animating = false;
+    QVariantAnimation *m_scaleAnim = nullptr;
+    QVariantAnimation *m_opacityAnim = nullptr;
+};
+
 } // namespace
 
 MainMenu::MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent)
@@ -316,15 +673,9 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     rightWrapLayout->setContentsMargins(18, 18, 18, 18);
     rightWrapLayout->setSpacing(0);
 
-    auto *rightSurface = new QWidget;
-    rightSurface->setObjectName("rightContentSurface");
-    rightSurface->setStyleSheet(
-        "#rightContentSurface {"
-        "  background:" + QString(Theme::BgPrimary) + ";"
-        "  border: 1px solid " + Theme::Border + ";"
-        "  border-radius: 8px;"
-        "}");
-    auto *surfaceLayout = new QVBoxLayout(rightSurface);
+    m_rightSurface = new QWidget;
+    m_rightSurface->setObjectName("rightContentSurface");
+    auto *surfaceLayout = new QVBoxLayout(m_rightSurface);
     surfaceLayout->setContentsMargins(0, 0, 0, 0);
     surfaceLayout->setSpacing(0);
 
@@ -345,8 +696,11 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     connect(settingsPanel, &SettingsPanel::petScaleChanged,
             this,          &MainMenu::petScaleChanged);
 
+    auto *scheduleContextReveal = new ContextPopHost(calendarPanel->contextPanel());
+    m_scheduleReveal = scheduleContextReveal;
+
     m_contextStack->addWidget(makePetContext());                 // 0 启动
-    m_contextStack->addWidget(calendarPanel->contextPanel());    // 1 日程
+    m_contextStack->addWidget(scheduleContextReveal);            // 1 日程
     m_contextStack->addWidget(makeSettingsContext(settingsPanel));// 2 设置
     m_contextStack->addWidget(new QWidget);                      // 3 其他
 
@@ -356,9 +710,10 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     m_stack->addWidget(new QWidget);                             // 3 其他
 
     surfaceLayout->addWidget(m_stack);
-    rightWrapLayout->addWidget(rightSurface);
+    rightWrapLayout->addWidget(m_rightSurface);
     contentLayout->addWidget(rightWrap, 1);
     root->addWidget(contentShell, 1);
+    updateRightSurfaceStyle(0);
 
     connect(m_navGrp, &QButtonGroup::idClicked, this, &MainMenu::switchPage);
 }
@@ -399,40 +754,17 @@ QWidget *MainMenu::makePetContext() {
     auto *page = new QWidget;
     auto *root = new QVBoxLayout(page);
     root->setContentsMargins(18, 22, 18, 18);
-    root->setSpacing(14);
+    root->setSpacing(12);
 
-    auto *label = new QLabel("当前宠物");
-    label->setStyleSheet(
-        "font-size: 12px; font-weight: 600;"
-        "color:" + QString(Theme::TextTertiary) + ";"
-        "letter-spacing:0;");
-    root->addWidget(label);
-
-    m_petPreview = new QLabel;
-    m_petPreview->setFixedSize(180, 180);
-    m_petPreview->setAlignment(Qt::AlignCenter);
-    m_petPreview->setStyleSheet(
-        "background:" + QString(Theme::PrimaryBg) + ";"
-        "border-radius: 8px;");
-    root->addWidget(m_petPreview, 0, Qt::AlignHCenter);
-
-    m_petName = new QLabel;
-    m_petName->setAlignment(Qt::AlignCenter);
-    m_petName->setStyleSheet(
-        "font-size: 15px; font-weight: 600;"
-        "color:" + QString(Theme::TextPrimary) + ";");
-    root->addWidget(m_petName);
-
-    auto *hint = new QLabel("在右侧选择卡片即可切换桌宠形象。");
-    hint->setWordWrap(true);
-    hint->setAlignment(Qt::AlignCenter);
-    hint->setStyleSheet(
-        "font-size: 12px;"
-        "color:" + QString(Theme::TextTertiary) + ";");
-    root->addWidget(hint);
+    auto *reveal = new PetRevealWidget;
+    m_petReveal = reveal;
+    root->addWidget(reveal);
     root->addStretch();
 
     updatePetContext(AppConfig::instance().petId());
+    QTimer::singleShot(0, reveal, [reveal]() {
+        reveal->playPop();
+    });
     return page;
 }
 
@@ -485,12 +817,72 @@ void MainMenu::refreshSchedules() {
 void MainMenu::switchPage(int id) {
     if (!m_stack || !m_contextStack) return;
 
-    m_stack->setCurrentIndex(id);
-    m_contextStack->setCurrentIndex(id);
+    const int target = qBound(0, id, 3);
+    if (target == m_currentPage)
+        return;
 
-    static constexpr int ContextWidths[] = {260, 260, 196, 0};
-    const int index = qBound(0, id, 3);
-    animateContextWidth(ContextWidths[index]);
+    if (m_pageSwitching) {
+        if (m_navGrp) {
+            if (auto *button = m_navGrp->button(m_currentPage)) {
+                QSignalBlocker blocker(m_navGrp);
+                button->setChecked(true);
+            }
+        }
+        return;
+    }
+
+    m_pageSwitching = true;
+    playContextExit(m_currentPage, [this, target]() {
+        completePageSwitch(target);
+    });
+}
+
+void MainMenu::completePageSwitch(int id) {
+    if (!m_stack || !m_contextStack) {
+        m_pageSwitching = false;
+        return;
+    }
+
+    const int target = qBound(0, id, 3);
+    if (target == 1 && m_scheduleReveal)
+        static_cast<ContextPopHost *>(m_scheduleReveal)->preparePop();
+
+    m_stack->setCurrentIndex(target);
+    m_contextStack->setCurrentIndex(target);
+    updateRightSurfaceStyle(target);
+
+    static constexpr int ContextWidths[] = {260, 320, 196, 0};
+    animateContextWidth(ContextWidths[target]);
+    m_currentPage = target;
+    playContextEnter(target);
+    m_pageSwitching = false;
+}
+
+void MainMenu::playContextExit(int id, const std::function<void()> &finished) {
+    if (id == 0) {
+        if (auto *reveal = qobject_cast<PetRevealWidget *>(m_petReveal)) {
+            reveal->playExit(finished);
+            return;
+        }
+    } else if (id == 1 && m_scheduleReveal) {
+        static_cast<ContextPopHost *>(m_scheduleReveal)->playExit(finished);
+        return;
+    }
+
+    if (finished)
+        finished();
+}
+
+void MainMenu::playContextEnter(int id) {
+    if (id == 0) {
+        if (auto *reveal = qobject_cast<PetRevealWidget *>(m_petReveal))
+            reveal->playPop();
+    } else if (id == 1 && m_scheduleReveal) {
+        QTimer::singleShot(40, m_scheduleReveal, [this]() {
+            if (m_contextStack && m_contextStack->currentIndex() == 1 && m_scheduleReveal)
+                static_cast<ContextPopHost *>(m_scheduleReveal)->playPop();
+        });
+    }
 }
 
 void MainMenu::animateContextWidth(int targetWidth) {
@@ -515,17 +907,26 @@ void MainMenu::animateContextWidth(int targetWidth) {
 }
 
 void MainMenu::updatePetContext(const QString &petId) {
-    if (!m_petPreview || !m_petName) return;
+    if (auto *reveal = qobject_cast<PetRevealWidget *>(m_petReveal))
+        reveal->setPet(petId);
+}
 
-    m_petName->setText(petId);
-    QPixmap sheet(QString(":/sprites/%1_idle.png").arg(petId));
-    if (!sheet.isNull()) {
-        m_petPreview->setPixmap(sheet.copy(0, 0, 128, 128).scaled(
-            152, 152, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        m_petPreview->setText({});
+void MainMenu::updateRightSurfaceStyle(int pageId) {
+    if (!m_rightSurface) return;
+
+    if (pageId == 0 || pageId == 3) {
+        m_rightSurface->setStyleSheet(
+            "#rightContentSurface {"
+            "  background: transparent;"
+            "  border: none;"
+            "}");
     } else {
-        m_petPreview->setPixmap({});
-        m_petPreview->setText("NJU-PETs++");
+        m_rightSurface->setStyleSheet(
+            "#rightContentSurface {"
+            "  background:" + QString(Theme::BgPrimary) + ";"
+            "  border: 1px solid " + Theme::Border + ";"
+            "  border-radius: 8px;"
+            "}");
     }
 }
 

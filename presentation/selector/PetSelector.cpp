@@ -12,7 +12,7 @@
 #include <QVBoxLayout>
 
 const QVector<PetSelector::PetDef> PetSelector::PETS = {
-    {"Muelsyse", "Muelsyse", ":/sprites/Muelsyse/idle.png"},
+    {"Muelsyse", "Muelsyse", ":/sprites/Muelsyse/Muelsyse.png"},
 };
 
 PetSelector::PetSelector(QWidget *parent)
@@ -24,22 +24,13 @@ PetSelector::PetSelector(QWidget *parent)
 
 void PetSelector::setupUi() {
     auto *root = new QVBoxLayout(this);
-    root->setContentsMargins(32, 28, 32, 28);
-    root->setSpacing(20);
-
-    auto *title = new QLabel("选择宠物形象");
-    title->setStyleSheet(
-        "font-size: 18px; font-weight: 600;"
-        "color: " + QString(Theme::TextPrimary) + ";");
-    root->addWidget(title);
-
-    auto *sub = new QLabel("选择后立即生效，宠物形象会随之更换。");
-    sub->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextTertiary) + ";");
-    root->addWidget(sub);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
 
     auto *grid = new QWidget;
     auto *gl = new QGridLayout(grid);
-    gl->setSpacing(16);
+    gl->setHorizontalSpacing(16);
+    gl->setVerticalSpacing(18);
     gl->setContentsMargins(0, 0, 0, 0);
     gl->setAlignment(Qt::AlignTop | Qt::AlignLeft);
 
@@ -47,40 +38,39 @@ void PetSelector::setupUi() {
         const PetDef &pet = PETS[i];
 
         auto *card = new QWidget;
-        card->setFixedSize(160, 220);
+        card->setObjectName("petCard");
+        card->setFixedSize(148, 198);
         m_cards[pet.id] = card;
 
         auto *cl = new QVBoxLayout(card);
-        cl->setContentsMargins(12, 16, 12, 12);
+        cl->setContentsMargins(12, 14, 12, 12);
         cl->setSpacing(8);
         cl->setAlignment(Qt::AlignCenter);
 
-        // 精灵图预览（取 idle 第一帧）
         auto *preview = new QLabel;
-        preview->setFixedSize(100, 100);
+        preview->setObjectName("petPreview");
+        preview->setFixedSize(112, 112);
         preview->setAlignment(Qt::AlignCenter);
-        QPixmap sheet(pet.spritePath);
-        if (!sheet.isNull()) {
-            preview->setPixmap(sheet.copy(0, 0, 128, 128).scaled(
-                100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        QPixmap image(pet.spritePath);
+        if (!image.isNull()) {
+            preview->setPixmap(image.scaled(
+                112, 112, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         } else {
-            preview->setStyleSheet(
-                "background: " + QString(Theme::PrimaryBg) + ";"
-                "border-radius: 50px; font-size: 44px;");
-            preview->setText("🐋");
+            preview->setStyleSheet("font-size: 40px; color: " + QString(Theme::TextTertiary) + ";");
+            preview->setText("+");
         }
         cl->addWidget(preview, 0, Qt::AlignCenter);
 
-        // 宠物名称
         auto *nameLbl = new QLabel(pet.name);
+        nameLbl->setObjectName("petName");
         nameLbl->setAlignment(Qt::AlignCenter);
         nameLbl->setStyleSheet(
-            "font-size: 13px; font-weight: 500;"
+            "font-size: 13px; font-weight: 700;"
             "color: " + QString(Theme::TextPrimary) + ";");
         cl->addWidget(nameLbl);
 
-        // 选择按钮
         auto *btn = new QPushButton;
+        btn->setObjectName("petSelectButton");
         btn->setFixedHeight(28);
         m_selectBtns[pet.id] = btn;
 
@@ -96,6 +86,44 @@ void PetSelector::setupUi() {
         gl->addWidget(card, i / 4, i % 4);
     }
 
+    const int extraIndex = PETS.size();
+    auto *pendingCard = new QWidget;
+    pendingCard->setObjectName("pendingPetCard");
+    pendingCard->setFixedSize(148, 198);
+    pendingCard->setStyleSheet(
+        "#pendingPetCard {"
+        "  background: " + QString(Theme::BgPrimary) + ";"
+        "  border: 1px dashed " + Theme::BorderSecondary + ";"
+        "  border-radius: 10px;"
+        "}"
+        "#pendingPetCard QLabel {"
+        "  border: none;"
+        "  background: transparent;"
+        "}");
+    auto *pendingLayout = new QVBoxLayout(pendingCard);
+    pendingLayout->setContentsMargins(12, 14, 12, 12);
+    pendingLayout->setSpacing(10);
+    pendingLayout->setAlignment(Qt::AlignCenter);
+
+    auto *plus = new QLabel("+");
+    plus->setObjectName("pendingPlus");
+    plus->setFixedSize(112, 112);
+    plus->setAlignment(Qt::AlignCenter);
+    plus->setStyleSheet(
+        "font-size: 44px; font-weight: 300;"
+        "color: " + QString(Theme::TextTertiary) + ";");
+    pendingLayout->addWidget(plus, 0, Qt::AlignCenter);
+
+    auto *pendingText = new QLabel("未完待续");
+    pendingText->setObjectName("pendingText");
+    pendingText->setAlignment(Qt::AlignCenter);
+    pendingText->setStyleSheet(
+        "font-size: 13px; font-weight: 700;"
+        "color: " + QString(Theme::TextSecondary) + ";");
+    pendingLayout->addWidget(pendingText);
+    pendingLayout->addStretch();
+    gl->addWidget(pendingCard, extraIndex / 4, extraIndex % 4);
+
     root->addWidget(grid);
     root->addStretch();
 
@@ -108,8 +136,18 @@ void PetSelector::markSelected(const QString &petId) {
     for (auto it = m_cards.begin(); it != m_cards.end(); ++it) {
         const bool sel = (it.key() == petId);
         it.value()->setStyleSheet(
-            "background: " + QString(Theme::BgPrimary) + "; border-radius: 12px;"
-            "border: 2px solid " + QString(sel ? Theme::Primary : Theme::Border) + ";");
+            "#petCard {"
+            "  background: " + QString(Theme::BgPrimary) + ";"
+            "  border-radius: 10px;"
+            "  border: 1px solid " + QString(sel ? Theme::Primary : Theme::BorderSecondary) + ";"
+            "}"
+            "#petCard QLabel {"
+            "  border: none;"
+            "  background: transparent;"
+            "}"
+            "#petCard QPushButton {"
+            "  border: none;"
+            "}");
     }
 
     for (auto it = m_selectBtns.begin(); it != m_selectBtns.end(); ++it) {
@@ -118,16 +156,15 @@ void PetSelector::markSelected(const QString &petId) {
         if (sel) {
             btn->setText("✓ 已选择");
             btn->setStyleSheet(
-                "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
+                "#petSelectButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
                 "  border: none; border-radius: 6px; font-size: 12px; }");
             btn->setEnabled(false);
         } else {
             btn->setText("选择");
             btn->setStyleSheet(
-                "QPushButton { background: none; color: " + QString(Theme::Primary) + ";"
-                "  border: 1px solid " + Theme::Primary + ";"
-                "  border-radius: 6px; font-size: 12px; }"
-                "QPushButton:hover { background: " + Theme::PrimaryBg + "; }");
+                "#petSelectButton { background: " + QString(Theme::PrimaryBg) + "; color: " + Theme::PrimaryDark + ";"
+                "  border: none; border-radius: 6px; font-size: 12px; }"
+                "#petSelectButton:hover { background: " + QString(Theme::BorderSecondary) + "; }");
             btn->setEnabled(true);
         }
     }

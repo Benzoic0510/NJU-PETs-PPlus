@@ -10,11 +10,14 @@
 
 #include <QButtonGroup>
 #include <QLabel>
+#include <QPixmap>
 #include <QPoint>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QVariantAnimation>
 #include <QWidget>
+
+#include <functional>
 
 class MainMenu : public QWidget {
     Q_OBJECT
@@ -40,17 +43,24 @@ private:
     QWidget     *makePetContext();
     QWidget     *makeSettingsContext(class SettingsPanel *settingsPanel);
     void         switchPage(int id);
+    void         completePageSwitch(int id);
+    void         playContextExit(int id, const std::function<void()> &finished);
+    void         playContextEnter(int id);
     void         animateContextWidth(int targetWidth);
     void         updatePetContext(const QString &petId);
+    void         updateRightSurfaceStyle(int pageId);
 
     QStackedWidget *m_stack  = nullptr;
     QStackedWidget *m_contextStack = nullptr;
     QButtonGroup   *m_navGrp = nullptr;
     QWidget        *m_contextPanel = nullptr;
+    QWidget        *m_rightSurface = nullptr;
     QWidget        *m_titleBar = nullptr;
-    QLabel         *m_petPreview = nullptr;
-    QLabel         *m_petName = nullptr;
+    QWidget        *m_petReveal = nullptr;
+    QWidget        *m_scheduleReveal = nullptr;
     QVariantAnimation *m_contextWidthAnim = nullptr;
+    int             m_currentPage = 0;
+    bool            m_pageSwitching = false;
     bool            m_dragging = false;
     QPoint          m_dragStartGlobal;
     QPoint          m_windowStartPos;
