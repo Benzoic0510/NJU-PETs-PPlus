@@ -44,6 +44,7 @@ void Application::start() {
     connect(m_petWidget, &PetWidget::interacted,         &m_petStateManager, &PetStateManager::onInteract);
     connect(&m_petStateManager, &PetStateManager::stateChanged, m_petWidget, &PetWidget::onStateChanged);
     connect(m_petWidget, &PetWidget::animationRequested, &m_petStateManager, &PetStateManager::onManualState);
+    connect(m_petWidget, &PetWidget::sleepWokeUp,       &m_petStateManager, &PetStateManager::onSleepWokeUp);
 
     // BubbleWidget
     m_bubbleWidget = new BubbleWidget;

@@ -26,6 +26,7 @@ signals:
     void animationRequested(const QString &state);
     void showMainMenuRequested();
     void quitRequested();
+    void sleepWokeUp();
 
 public slots:
     void onStateChanged(const QString &state);
@@ -40,17 +41,28 @@ protected:
 private:
     void showMainMenu(QPoint globalPos);
     void showActionMenu(QPoint globalPos);
+    void startSleepSequence();
+    void onSegmentFinished();
+
+    enum SleepPhase { SleepNone, SleepFalling, SleepLooping, SleepWaking };
 
     Animator   m_animator;
     RadialMenu m_mainMenu;
     RadialMenu m_actionMenu;
-    QString    m_petId    = "Muelsyse";
-    int        m_petScale = 100;
+    QString    m_petId       = "Muelsyse";
+    int        m_petScale    = 100;
     QPoint     m_dragStart;
-    bool       m_dragging = false;
+    bool       m_dragging    = false;
     QPoint     m_lastRightClick;
+    SleepPhase m_sleepPhase  = SleepNone;
+    bool       m_wakePending = false;
 
     static constexpr int DragThreshold = 4;
+    static constexpr int kFallingLast  = 14;   // frames 0-14: 入睡
+    static constexpr int kLoopStart    = 15;   // frames 15-44: 睡眠循环
+    static constexpr int kLoopLast     = 44;
+    static constexpr int kWakeStart    = 45;   // frames 45-59: 醒来
+    static constexpr int kWakeLast     = 59;
 };
 
 #endif // PETWIDGET_H

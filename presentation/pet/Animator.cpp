@@ -19,12 +19,15 @@ void Animator::load(const QString &petId, const QString &state, int rows, int co
     m_petId = petId;
     m_state = state;
     m_frameIndex = 0;
+    m_oneShot    = false;
+    m_segStart   = 0;
+    m_segEnd     = 0;
 
     const QString path = ":/sprites/" + petId + "/" + state + ".png";
     QPixmap sheet(path);
 
     if (!sheet.isNull()) {
-        if (cols <= 0) {                       // 单行横排：每帧为正方形
+        if (cols <= 0) {
             rows = 1;
             cols = sheet.width() / sheet.height();
             if (cols <= 0) cols = 1;
@@ -63,8 +66,48 @@ QPixmap Animator::currentFrame() const {
     return makePlaceholder();
 }
 
+void Animator::setSegment(int start, int end) {
+    m_segStart = start;
+    m_segEnd   = end;
+    m_oneShot  = false;
+    if (m_frameIndex < start || m_frameIndex >= end)
+        m_frameIndex = start;
+    m_timer.start();
+    emit frameChanged();
+}
+
+void Animator::playOnce(int start, int end) {
+    m_segStart = start;
+    m_segEnd   = end;
+    m_oneShot  = true;
+    m_frameIndex = start;
+    m_timer.start();
+    emit frameChanged();
+}
+
+void Animator::resetSegment() {
+    m_segStart = 0;
+    m_segEnd   = 0;
+    m_oneShot  = false;
+    m_timer.start();
+    emit frameChanged();
+}
+
 void Animator::nextFrame() {
-    m_frameIndex = (m_frameIndex + 1) % m_frameCount;
+    const int start = (m_segEnd > 0) ? m_segStart : 0;
+    const int end   = (m_segEnd > 0) ? m_segEnd   : m_frameCount;
+
+    m_frameIndex++;
+    if (m_frameIndex >= end) {
+        if (m_oneShot) {
+            m_frameIndex = end - 1;
+            m_timer.stop();
+            emit segmentFinished();
+        } else {
+            m_frameIndex = start;
+            emit segmentFinished();
+        }
+    }
     emit frameChanged();
 }
 
@@ -75,12 +118,10 @@ QPixmap Animator::makePlaceholder() const {
     QPainter p(&px);
     p.setRenderHint(QPainter::Antialiasing);
 
-    // 圆形背景
     p.setPen(Qt::NoPen);
     p.setBrush(QColor(Theme::PrimaryBg));
     p.drawEllipse(px.rect().adjusted(4, 4, -4, -4));
 
-    // 中心文字
     p.setPen(QColor(Theme::Primary));
     p.setFont(QFont("Segoe UI", 32));
     p.drawText(px.rect(), Qt::AlignCenter, "✦");

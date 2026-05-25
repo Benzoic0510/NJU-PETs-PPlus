@@ -39,12 +39,16 @@ void PetStateManager::onDragEnded() {
 
 void PetStateManager::onInteract() {
     m_returnTimer.stop();
+    if (m_state == "sleep") return;  // PetWidget 自己处理唤醒流程
+    resetSleepTimer();
     setState("greet");
     m_returnTimer.start(8000);
 }
 
 void PetStateManager::onRemind() {
     m_returnTimer.stop();
+    if (m_state == "sleep") return;
+    resetSleepTimer();
     setState("greet");
     m_returnTimer.start(5000);
 }
@@ -62,6 +66,10 @@ void PetStateManager::onManualState(const QString &state) {
     m_returnTimer.stop();
     setState(state);
     if (state != "sleep") m_returnTimer.start(8000);
+}
+
+void PetStateManager::onSleepWokeUp() {
+    onWake();
 }
 
 void PetStateManager::onIdleTick() {

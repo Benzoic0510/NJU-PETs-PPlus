@@ -15,13 +15,17 @@ class Animator : public QObject {
 public:
     explicit Animator(QObject *parent = nullptr);
 
-    // rows/cols 描述 spritesheet 的网格布局；cols<=0 时按单行横排自动推断（width/height）
     void    load(const QString &petId, const QString &state, int rows = 1, int cols = 0);
     void    setFps(int fps);
     QPixmap currentFrame() const;
 
+    void    setSegment(int start, int end);  // loop within [start, end)
+    void    playOnce(int start, int end);    // play [start, end) once, stop, emit segmentFinished
+    void    resetSegment();                  // back to full range looping
+
 signals:
     void frameChanged();
+    void segmentFinished();
 
 private slots:
     void nextFrame();
@@ -38,8 +42,11 @@ private:
     int     m_frameIndex = 0;
     double  m_frameW     = 128.0;
     double  m_frameH     = 128.0;
-    int     m_frameSize  = 128;   // 仅占位符使用
+    int     m_frameSize  = 128;
     bool    m_hasSheet   = false;
+    bool    m_oneShot    = false;
+    int     m_segStart   = 0;
+    int     m_segEnd     = 0;
     QTimer  m_timer;
 };
 

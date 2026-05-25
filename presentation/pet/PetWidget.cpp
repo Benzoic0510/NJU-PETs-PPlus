@@ -22,8 +22,10 @@ PetWidget::PetWidget(QWidget *parent)
     move(screen.right() - 160, screen.bottom() - 160);
 
     connect(&m_animator, &Animator::frameChanged, this, QOverload<>::of(&QWidget::update));
+    connect(&m_animator, &Animator::segmentFinished, this, &PetWidget::onSegmentFinished);
+
     {
-            const auto g = SkinManifest::instance().gridFor(m_petId, "idle");
+        const auto g = SkinManifest::instance().gridFor(m_petId, "idle");
         m_animator.load(m_petId, "idle", g.rows, g.cols);
     }
 
@@ -44,13 +46,10 @@ PetWidget::PetWidget(QWidget *parent)
 
 void PetWidget::loadPet(const QString &petId) {
     m_petId = petId;
+    m_sleepPhase  = SleepNone;
+    m_wakePending = false;
     const auto g = SkinManifest::instance().gridFor(m_petId, "idle");
     m_animator.load(m_petId, "idle", g.rows, g.cols);
-}
-
-void PetWidget::onStateChanged(const QString &state) {
-    const auto g = SkinManifest::instance().gridFor(m_petId, state);
-    m_animator.load(m_petId, state, g.rows, g.cols);
 }
 
 void PetWidget::setPetScale(int scale) {
@@ -58,6 +57,50 @@ void PetWidget::setPetScale(int scale) {
     const int side = 128 * m_petScale / 100;
     setFixedSize(side, side);
     update();
+}
+
+void PetWidget::onStateChanged(const QString &state) {
+    if (state == "sleep") {
+        startSleepSequence();
+    } else {
+        m_sleepPhase  = SleepNone;
+        m_wakePending = false;
+        m_animator.resetSegment();
+        const auto g = SkinManifest::instance().gridFor(m_petId, state);
+        m_animator.load(m_petId, state, g.rows, g.cols);
+    }
+}
+
+void PetWidget::startSleepSequence() {
+    m_sleepPhase  = SleepFalling;
+    m_wakePending = false;
+    const auto g = SkinManifest::instance().gridFor(m_petId, "sleep");
+    m_animator.load(m_petId, "sleep", g.rows, g.cols);
+    m_animator.playOnce(0, kFallingLast + 1);  // frames 0-14
+}
+
+void PetWidget::onSegmentFinished() {
+    switch (m_sleepPhase) {
+    case SleepFalling:
+        m_sleepPhase = SleepLooping;
+        m_animator.setSegment(kLoopStart, kLoopLast + 1);  // loop frames 15-44
+        break;
+    case SleepLooping:
+        if (m_wakePending) {
+            m_sleepPhase  = SleepWaking;
+            m_wakePending = false;
+            m_animator.playOnce(kWakeStart, kWakeLast + 1);  // frames 45-59
+        }
+        // else: setSegment keeps looping, segmentFinished fires each loop
+        break;
+    case SleepWaking:
+        m_sleepPhase = SleepNone;
+        m_animator.resetSegment();
+        emit sleepWokeUp();
+        break;
+    case SleepNone:
+        break;
+    }
 }
 
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {
@@ -106,7 +149,17 @@ void PetWidget::mouseReleaseEvent(QMouseEvent *event) {
     if (m_dragging) {
         m_dragging = false;
         emit dragEnded();
-    } else {
-        emit interacted();
+        return;
     }
+
+    // 睡眠中点击：入睡/醒来阶段忽略，循环阶段请求唤醒
+    if (m_sleepPhase == SleepFalling || m_sleepPhase == SleepWaking) {
+        return;
+    }
+    if (m_sleepPhase == SleepLooping) {
+        m_wakePending = true;
+        return;
+    }
+
+    emit interacted();
 }
