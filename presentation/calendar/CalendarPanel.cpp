@@ -18,19 +18,19 @@
 
 // ── CalendarPanel ─────────────────────────────────────────────────────────────
 
-CalendarPanel::CalendarPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent)
+CalendarPanel::CalendarPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent, bool embedContextPanel)
     : QWidget(parent)
     , m_svc(svc)
     , m_selDate(QDate::currentDate())
 {
-    setupUi(nlp);
+    setupUi(nlp, embedContextPanel);
 
     connect(svc, &ScheduleService::scheduleAdded,   this, [this](int){ refresh(); });
     connect(svc, &ScheduleService::scheduleUpdated, this, [this](int){ refresh(); });
     connect(svc, &ScheduleService::scheduleRemoved, this, [this](int){ refresh(); });
 }
 
-void CalendarPanel::setupUi(NLPService *nlp) {
+void CalendarPanel::setupUi(NLPService *nlp, bool embedContextPanel) {
     auto *root = new QHBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
@@ -39,10 +39,10 @@ void CalendarPanel::setupUi(NLPService *nlp) {
     // 左面板
     // ══════════════════════════════════════════════════════════
     auto *left = new QWidget;
+    m_contextPanel = left;
     left->setFixedWidth(260);
     left->setObjectName("calLeft");
-    left->setStyleSheet(
-        "#calLeft { background: transparent; border-right: 1px solid " + QString(Theme::Border) + "; }");
+    left->setStyleSheet("#calLeft { background: transparent; border: none; }");
 
     auto *leftLayout = new QVBoxLayout(left);
     leftLayout->setContentsMargins(16, 20, 16, 20);
@@ -78,13 +78,16 @@ void CalendarPanel::setupUi(NLPService *nlp) {
     leftLayout->addWidget(m_upcomingList);
     leftLayout->addStretch();
 
-    root->addWidget(left);
+    if (embedContextPanel)
+        root->addWidget(left);
 
     // ══════════════════════════════════════════════════════════
     // 右面板
     // ══════════════════════════════════════════════════════════
     m_rightPanel = new QWidget;
     auto *right = m_rightPanel;
+    right->setObjectName("calRight");
+    right->setStyleSheet("#calRight { background: transparent; }");
     auto *rightLayout = new QVBoxLayout(right);
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(0);
@@ -217,7 +220,7 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
     container->setObjectName("schedPopup");
     container->setStyleSheet(
         "#schedPopup {"
-        "  background: white;"
+        "  background: " + QString(Theme::BgPrimary) + ";"
         "  border-radius: 10px;"
         "  border: 1px solid " + QString(Theme::Border) + ";"
         "}");

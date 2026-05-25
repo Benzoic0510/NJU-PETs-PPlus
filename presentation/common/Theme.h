@@ -36,7 +36,8 @@ inline constexpr auto TextSecondary = "#4A4A6A";
 inline constexpr auto TextTertiary  = "#8888AA";
 
 // ── Background ───────────────────────────────────────────
-inline constexpr auto BgPrimary   = "#FFFFFF";
+inline constexpr auto White       = "#FDFDFF";
+inline constexpr auto BgPrimary   = White;
 inline constexpr auto BgSecondary = "#F5F5FB";
 inline constexpr auto BgSidebar   = "#F8F8FF";
 

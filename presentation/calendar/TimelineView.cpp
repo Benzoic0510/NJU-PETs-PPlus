@@ -200,9 +200,12 @@ TimelineView::TimelineView(QWidget *parent)
 {
     setFrameShape(QFrame::NoFrame);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setStyleSheet("QScrollArea { background: transparent; }");
+    viewport()->setStyleSheet("background: transparent;");
 
     m_canvas = new TimelineCanvas(this);
+    m_canvas->setStyleSheet("background: transparent;");
     setWidget(m_canvas);
     setWidgetResizable(true);
 

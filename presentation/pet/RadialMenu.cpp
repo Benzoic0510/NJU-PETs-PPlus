@@ -99,7 +99,9 @@ void RadialMenu::drawSector(QPainter &p, int index) const {
         p.setBrush(QColor(Theme::Primary));
         p.setPen(Qt::NoPen);
     } else {
-        p.setBrush(QColor(255, 255, 255, 220));
+        QColor sectorBg(Theme::BgPrimary);
+        sectorBg.setAlpha(220);
+        p.setBrush(sectorBg);
         p.setPen(QPen(QColor(Theme::Border), 1.0));
     }
     p.drawPath(path);
@@ -110,7 +112,7 @@ void RadialMenu::drawSector(QPainter &p, int index) const {
     const double lx          = cx + midR * std::cos(midAngleRad);
     const double ly          = cy + midR * std::sin(midAngleRad);
 
-    const QColor textColor = hov ? Qt::white : QColor(Theme::TextSecondary);
+    const QColor textColor = hov ? QColor(Theme::BgPrimary) : QColor(Theme::TextSecondary);
 
     // 图标
     if (!m_items[index].icon.isEmpty()) {
@@ -145,8 +147,10 @@ void RadialMenu::paintEvent(QPaintEvent *) {
     // 中心圆
     const double cx = WidgetSize / 2.0;
     const double cy = WidgetSize / 2.0;
+    QColor centerBg(Theme::BgPrimary);
+    centerBg.setAlpha(200);
     p.setPen(QPen(QColor(Theme::Border), 1));
-    p.setBrush(QColor(255, 255, 255, 200));
+    p.setBrush(centerBg);
     p.drawEllipse(QPointF(cx, cy), InnerR - 4.0, InnerR - 4.0);
 }
 

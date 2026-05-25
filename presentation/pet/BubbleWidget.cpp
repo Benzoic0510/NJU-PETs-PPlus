@@ -24,7 +24,7 @@ BubbleWidget::BubbleWidget(QWidget *parent)
                 "border-radius: 8px;"
                 "padding: 4px 8px;"
                 "font-size: 13px;"
-                "background: white;"
+                "background: " + QString(Theme::BgPrimary) + ";"
                 "}")
             .arg(Theme::Primary));
     connect(m_edit, &QLineEdit::returnPressed, this, &BubbleWidget::submit);
@@ -227,8 +227,10 @@ void BubbleWidget::paintEvent(QPaintEvent *) {
     path.addPolygon(tail);
     path.closeSubpath();
 
+    QColor bubbleBg(Theme::BgPrimary);
+    bubbleBg.setAlpha(245);
     p.setPen(QPen(QColor(Theme::Border), 1.0));
-    p.setBrush(QColor(255, 255, 255, 245));
+    p.setBrush(bubbleBg);
     p.drawPath(path);
 
     // 输入框与输出之间的分隔线

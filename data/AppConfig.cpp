@@ -28,6 +28,7 @@ void AppConfig::load() {
 
     const QJsonObject obj = QJsonDocument::fromJson(f.readAll()).object();
     m_petId            = obj.value("petId").toString("Muelsyse");
+    m_petScale         = obj.value("petScale").toInt(100);
     m_reminderEnabled  = obj.value("reminderEnabled").toBool(true);
     m_volume           = obj.value("volume").toInt(80);
     m_apiKey           = obj.value("apiKey").toString();
@@ -36,6 +37,7 @@ void AppConfig::load() {
 void AppConfig::save() {
     QJsonObject obj;
     obj["petId"]            = m_petId;
+    obj["petScale"]         = m_petScale;
     obj["reminderEnabled"]  = m_reminderEnabled;
     obj["volume"]           = m_volume;
     obj["apiKey"]           = m_apiKey;
@@ -50,6 +52,9 @@ void AppConfig::save() {
 
 QString AppConfig::petId() const            { return m_petId; }
 void AppConfig::setPetId(const QString &id) { m_petId = id; }
+
+int AppConfig::petScale() const              { return m_petScale; }
+void AppConfig::setPetScale(int scale)       { m_petScale = qBound(60, scale, 180); }
 
 bool AppConfig::reminderEnabled() const         { return m_reminderEnabled; }
 void AppConfig::setReminderEnabled(bool on)     { m_reminderEnabled = on; }

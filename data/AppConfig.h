@@ -17,6 +17,9 @@ public:
     QString petId() const;
     void setPetId(const QString &id);
 
+    int petScale() const;
+    void setPetScale(int scale);
+
     bool reminderEnabled() const;
     void setReminderEnabled(bool on);
 
@@ -34,6 +37,7 @@ private:
     QString configPath() const;
 
     QString m_petId = "Muelsyse";
+    int m_petScale = 100;
     bool m_reminderEnabled = true;
     int m_volume = 80;
     QString m_apiKey;

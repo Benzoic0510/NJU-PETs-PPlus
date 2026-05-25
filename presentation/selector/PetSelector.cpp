@@ -108,7 +108,7 @@ void PetSelector::markSelected(const QString &petId) {
     for (auto it = m_cards.begin(); it != m_cards.end(); ++it) {
         const bool sel = (it.key() == petId);
         it.value()->setStyleSheet(
-            "background: white; border-radius: 12px;"
+            "background: " + QString(Theme::BgPrimary) + "; border-radius: 12px;"
             "border: 2px solid " + QString(sel ? Theme::Primary : Theme::Border) + ";");
     }
 
@@ -118,7 +118,7 @@ void PetSelector::markSelected(const QString &petId) {
         if (sel) {
             btn->setText("✓ 已选择");
             btn->setStyleSheet(
-                "QPushButton { background: " + QString(Theme::Primary) + "; color: white;"
+                "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
                 "  border: none; border-radius: 6px; font-size: 12px; }");
             btn->setEnabled(false);
         } else {

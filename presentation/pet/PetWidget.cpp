@@ -3,6 +3,7 @@
 //
 
 #include "presentation/pet/PetWidget.h"
+#include "data/AppConfig.h"
 
 #include <QGuiApplication>
 #include <QMouseEvent>
@@ -23,7 +24,7 @@ PetWidget::PetWidget(QWidget *parent)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool);
     setAttribute(Qt::WA_TranslucentBackground);
-    setFixedSize(128, 128);
+    setPetScale(AppConfig::instance().petScale());
 
     const QRect screen = QGuiApplication::primaryScreen()->availableGeometry();
     move(screen.right() - 160, screen.bottom() - 160);
@@ -58,6 +59,13 @@ void PetWidget::loadPet(const QString &petId) {
 void PetWidget::onStateChanged(const QString &state) {
     const auto g = gridFor(m_petId, state);
     m_animator.load(m_petId, state, g.rows, g.cols);
+}
+
+void PetWidget::setPetScale(int scale) {
+    m_petScale = qBound(60, scale, 180);
+    const int side = 128 * m_petScale / 100;
+    setFixedSize(side, side);
+    update();
 }
 
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {

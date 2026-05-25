@@ -29,6 +29,7 @@ signals:
 
 public slots:
     void onStateChanged(const QString &state);
+    void setPetScale(int scale);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -44,6 +45,7 @@ private:
     RadialMenu m_mainMenu;
     RadialMenu m_actionMenu;
     QString    m_petId    = "Muelsyse";
+    int        m_petScale = 100;
     QPoint     m_dragStart;
     bool       m_dragging = false;
     QPoint     m_lastRightClick;

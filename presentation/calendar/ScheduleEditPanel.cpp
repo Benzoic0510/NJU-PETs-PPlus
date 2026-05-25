@@ -5,11 +5,124 @@
 #include "presentation/calendar/ScheduleEditPanel.h"
 #include "presentation/common/Theme.h"
 
+#include <QAbstractItemView>
+#include <QCalendarWidget>
+#include <QEvent>
 #include <QFrame>
 #include <QFormLayout>
 #include <QHBoxLayout>
+#include <QIcon>
+#include <QItemSelectionModel>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QTextCharFormat>
+#include <QToolButton>
 #include <QVBoxLayout>
+
+namespace {
+
+class ThemedCalendarWidget : public QCalendarWidget {
+public:
+    explicit ThemedCalendarWidget(QWidget *parent = nullptr)
+        : QCalendarWidget(parent)
+    {
+        setMouseTracking(true);
+    }
+
+    void enableHoverTracking() {
+        if (m_calendarView) return;
+        m_calendarView = findChild<QAbstractItemView *>("qt_calendar_calendarview");
+        if (!m_calendarView) return;
+        m_calendarView->setFocusPolicy(Qt::NoFocus);
+        m_calendarView->setSelectionMode(QAbstractItemView::NoSelection);
+        m_calendarView->setCurrentIndex(QModelIndex());
+        if (m_calendarView->selectionModel())
+            m_calendarView->selectionModel()->clear();
+        m_calendarView->setMouseTracking(true);
+        m_calendarView->viewport()->setMouseTracking(true);
+        m_calendarView->viewport()->installEventFilter(this);
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override {
+        if (m_calendarView && watched == m_calendarView->viewport()) {
+            if (event->type() == QEvent::MouseMove) {
+                auto *mouseEvent = static_cast<QMouseEvent *>(event);
+                const QModelIndex index = m_calendarView->indexAt(mouseEvent->pos());
+                const QDate date = (index.isValid() && index.row() > 0)
+                    ? dateForCell(index.row(), index.column())
+                    : QDate();
+                if (date != m_hoveredDate) {
+                    m_hoveredDate = date;
+                    update();
+                }
+            } else if (event->type() == QEvent::Leave) {
+                if (m_hoveredDate.isValid()) {
+                    m_hoveredDate = QDate();
+                    update();
+                }
+            }
+        }
+        return QCalendarWidget::eventFilter(watched, event);
+    }
+
+    void paintCell(QPainter *painter, const QRect &rect, QDate date) const override {
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->fillRect(rect, QColor(Theme::BgPrimary));
+
+        const bool isCurrentMonth = date.year() == yearShown() && date.month() == monthShown();
+        const bool isSelected = date == selectedDate();
+        const bool isToday = date == QDate::currentDate();
+        const bool isHovered = date == m_hoveredDate && isCurrentMonth && !isSelected;
+        const QRectF bgRect = QRectF(rect).adjusted(4, 3, -4, -3);
+
+        if (isSelected) {
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor(Theme::Primary));
+            painter->drawRoundedRect(bgRect, 6, 6);
+        } else if (isHovered) {
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor(Theme::PrimaryBg));
+            painter->drawRoundedRect(bgRect, 6, 6);
+        } else if (isToday && isCurrentMonth) {
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(QColor(Theme::PrimaryBg));
+            painter->drawRoundedRect(bgRect, 6, 6);
+        }
+
+        QFont cellFont = painter->font();
+        cellFont.setPointSize(9);
+        cellFont.setBold(isSelected || (isToday && isCurrentMonth));
+        painter->setFont(cellFont);
+
+        if (isSelected) {
+            painter->setPen(QColor(Theme::BgPrimary));
+        } else if (!isCurrentMonth) {
+            painter->setPen(QColor(Theme::TextTertiary));
+            painter->setOpacity(0.42);
+        } else if (isToday) {
+            painter->setPen(QColor(Theme::PrimaryDark));
+        } else {
+            painter->setPen(QColor(Theme::TextSecondary));
+        }
+
+        painter->drawText(rect, Qt::AlignCenter, QString::number(date.day()));
+        painter->restore();
+    }
+
+private:
+    QDate dateForCell(int row, int column) const {
+        const QDate firstOfMonth(yearShown(), monthShown(), 1);
+        const int offset = (firstOfMonth.dayOfWeek() - static_cast<int>(firstDayOfWeek()) + 7) % 7;
+        return firstOfMonth.addDays((row - 1) * 7 + column - offset);
+    }
+
+    QAbstractItemView *m_calendarView = nullptr;
+    QDate m_hoveredDate;
+};
+
+} // namespace
 
 ScheduleEditPanel::ScheduleEditPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent)
     : QWidget(parent), m_svc(svc), m_nlp(nlp)
@@ -36,14 +149,14 @@ void ScheduleEditPanel::setupUi() {
     m_nlpEdit->setFixedHeight(30);
     m_nlpEdit->setStyleSheet(
         "QLineEdit { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 6px; padding: 0 8px; font-size: 12px; background: white; }"
+        "  border-radius: 6px; padding: 0 8px; font-size: 12px; background: " + QString(Theme::BgPrimary) + "; }"
         "QLineEdit:focus { border-color: " + Theme::Primary + "; }");
 
     m_parseBtn = new QPushButton("解析");
     m_parseBtn->setFixedSize(52, 30);
     m_parseBtn->setCursor(Qt::PointingHandCursor);
     m_parseBtn->setStyleSheet(
-        "QPushButton { background: " + QString(Theme::Primary) + "; color: white;"
+        "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
         "  border-radius: 6px; font-size: 12px; border: none; }"
         "QPushButton:hover { background: " + Theme::PrimaryDark + "; }"
         "QPushButton:disabled { opacity: 0.6; }");
@@ -75,10 +188,138 @@ void ScheduleEditPanel::setupUi() {
         "QLineEdit:focus { border-color: " + Theme::Primary + "; }";
     const QString dtSS =
         "QDateTimeEdit { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 5px; padding: 2px 6px; font-size: 12px; }"
+        "  border-radius: 5px; padding: 2px 6px; font-size: 12px;"
+        "  background: " + Theme::BgPrimary + "; color: " + Theme::TextPrimary + "; }"
         "QDateTimeEdit:focus { border-color: " + Theme::Primary + "; }";
     const QString labelSS =
         "font-size: 12px; color: " + QString(Theme::TextSecondary) + ";";
+
+    auto makeCalendar = []() {
+        auto *cal = new ThemedCalendarWidget;
+        cal->setGridVisible(false);
+        cal->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
+        cal->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+
+        QTextCharFormat weekdayFormat;
+        weekdayFormat.setForeground(QColor(Theme::TextSecondary));
+        cal->setHeaderTextFormat(weekdayFormat);
+        cal->setWeekdayTextFormat(Qt::Saturday, weekdayFormat);
+        cal->setWeekdayTextFormat(Qt::Sunday, weekdayFormat);
+
+        cal->setStyleSheet(
+            "QCalendarWidget {"
+            "  background: " + QString(Theme::BgPrimary) + ";"
+            "  color: " + Theme::TextPrimary + ";"
+            "  border: 1px solid " + Theme::Border + ";"
+            "}"
+            "QCalendarWidget QWidget#qt_calendar_navigationbar {"
+            "  background: " + QString(Theme::PrimaryDark) + ";"
+            "  min-height: 36px;"
+            "}"
+            "QCalendarWidget QToolButton {"
+            "  background: transparent;"
+            "  color: " + QString(Theme::BgPrimary) + ";"
+            "  border: none;"
+            "  border-radius: 6px;"
+            "  margin: 3px;"
+            "  padding: 2px 8px;"
+            "  font-size: 12px;"
+            "  font-weight: 600;"
+            "}"
+            "QCalendarWidget QToolButton:hover {"
+            "  background: " + QString(Theme::PrimaryMid) + ";"
+            "}"
+            "QCalendarWidget QToolButton:pressed {"
+            "  background: " + QString(Theme::PrimaryMid) + ";"
+            "}"
+            "QCalendarWidget QToolButton:checked,"
+            "QCalendarWidget QToolButton:focus {"
+            "  background: transparent;"
+            "  border: none;"
+            "  outline: 0;"
+            "}"
+            "QCalendarWidget QAbstractItemView {"
+            "  background: " + QString(Theme::BgPrimary) + ";"
+            "  color: " + Theme::TextSecondary + ";"
+            "  selection-background-color: transparent;"
+            "  selection-color: " + Theme::TextSecondary + ";"
+            "  alternate-background-color: " + Theme::BgSecondary + ";"
+            "  border: none;"
+            "  font-size: 12px;"
+            "  padding-top: 8px;"
+            "  outline: 0;"
+            "}"
+            "QCalendarWidget QAbstractItemView::item {"
+            "  border: none;"
+            "  outline: 0;"
+            "}"
+            "QCalendarWidget QAbstractItemView::item:selected,"
+            "QCalendarWidget QAbstractItemView::item:focus,"
+            "QCalendarWidget QAbstractItemView::item:selected:focus,"
+            "QCalendarWidget QAbstractItemView::item:hover {"
+            "  background: transparent;"
+            "  border: none;"
+            "  outline: 0;"
+            "}"
+        );
+
+        auto updateCalendarTitle = [cal]() {
+            if (auto *title = cal->findChild<QLabel *>("custom_calendar_title")) {
+                title->setText(QString("%1 年 %2 月")
+                    .arg(cal->yearShown())
+                    .arg(cal->monthShown()));
+            }
+
+            cal->update();
+        };
+
+        auto setupCalendarChrome = [cal, updateCalendarTitle]() {
+            if (auto *prev = cal->findChild<QToolButton *>("qt_calendar_prevmonth")) {
+                prev->setIcon(QIcon());
+                prev->setArrowType(Qt::NoArrow);
+                prev->setText("‹");
+                prev->setFixedSize(30, 28);
+                prev->setFocusPolicy(Qt::NoFocus);
+            }
+            if (auto *next = cal->findChild<QToolButton *>("qt_calendar_nextmonth")) {
+                next->setIcon(QIcon());
+                next->setArrowType(Qt::NoArrow);
+                next->setText("›");
+                next->setFixedSize(30, 28);
+                next->setFocusPolicy(Qt::NoFocus);
+            }
+            if (auto *month = cal->findChild<QToolButton *>("qt_calendar_monthbutton")) {
+                month->hide();
+            }
+            if (auto *yearBtn = cal->findChild<QToolButton *>("qt_calendar_yearbutton")) {
+                yearBtn->hide();
+            }
+            if (auto *yearEdit = cal->findChild<QWidget *>("qt_calendar_yearedit")) {
+                yearEdit->hide();
+            }
+            if (auto *nav = cal->findChild<QWidget *>("qt_calendar_navigationbar")) {
+                if (auto *layout = qobject_cast<QHBoxLayout *>(nav->layout())) {
+                    auto *title = nav->findChild<QLabel *>("custom_calendar_title");
+                    if (!title) {
+                        title = new QLabel(nav);
+                        title->setObjectName("custom_calendar_title");
+                        title->setAlignment(Qt::AlignCenter);
+                        title->setStyleSheet(
+                            "font-size: 12px;"
+                            "font-weight: 600;"
+                            "color: " + QString(Theme::BgPrimary) + ";"
+                            "background: transparent;");
+                        layout->insertWidget(2, title, 1, Qt::AlignVCenter);
+                    }
+                }
+            }
+            updateCalendarTitle();
+        };
+        setupCalendarChrome();
+        cal->enableHoverTracking();
+        QObject::connect(cal, &QCalendarWidget::currentPageChanged, cal, updateCalendarTitle);
+        return cal;
+    };
 
     // DDL 复选框
     m_isDDLCheck = new QCheckBox("设为截止日期（DDL）");
@@ -106,12 +347,14 @@ void ScheduleEditPanel::setupUi() {
     m_startEdit = new QDateTimeEdit;
     m_startEdit->setDisplayFormat("yyyy-MM-dd  HH:mm");
     m_startEdit->setCalendarPopup(true);
+    m_startEdit->setCalendarWidget(makeCalendar());
     m_startEdit->setStyleSheet(dtSS);
     form->addRow(makeLabel("开始"), m_startEdit);
 
     m_endEdit = new QDateTimeEdit;
     m_endEdit->setDisplayFormat("yyyy-MM-dd  HH:mm");
     m_endEdit->setCalendarPopup(true);
+    m_endEdit->setCalendarWidget(makeCalendar());
     m_endEdit->setStyleSheet(dtSS);
     form->addRow(makeLabel("结束"), m_endEdit);
 
@@ -150,7 +393,7 @@ void ScheduleEditPanel::setupUi() {
     m_confirmBtn->setFixedHeight(28);
     m_confirmBtn->setCursor(Qt::PointingHandCursor);
     m_confirmBtn->setStyleSheet(
-        "QPushButton { background: " + QString(Theme::Primary) + "; color: white;"
+        "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
         "  border-radius: 6px; font-size: 12px; border: none; padding: 0 12px; }"
         "QPushButton:hover { background: " + Theme::PrimaryDark + "; }");
     connect(m_confirmBtn, &QPushButton::clicked, this, &ScheduleEditPanel::onConfirm);
@@ -219,8 +462,10 @@ void ScheduleEditPanel::paintEvent(QPaintEvent *) {
     p.setRenderHint(QPainter::Antialiasing);
 
     // 背景白底 + 边框
+    QColor panelBg(Theme::BgPrimary);
+    panelBg.setAlpha(250);
     p.setPen(QPen(QColor(Theme::Border), 1));
-    p.setBrush(QColor(255, 255, 255, 250));
+    p.setBrush(panelBg);
     p.drawRoundedRect(rect().adjusted(1, 1, -1, -1), 10, 10);
 }
 

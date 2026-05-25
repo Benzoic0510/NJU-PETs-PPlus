@@ -154,7 +154,7 @@ void MiniCalendar::paintEvent(QPaintEvent *) {
             }
 
             // 数字（稍微上移为小圆点留空）
-            if (isSelected)       p.setPen(Qt::white);
+            if (isSelected)       p.setPen(QColor(Theme::BgPrimary));
             else if (isToday)     p.setPen(QColor(Theme::PrimaryDark));
             else if (isThisMonth) p.setPen(QColor(Theme::TextSecondary));
             else                  p.setPen(QColor(Theme::TextTertiary));
@@ -168,15 +168,15 @@ void MiniCalendar::paintEvent(QPaintEvent *) {
             p.setPen(Qt::NoPen);
             if (hasEvent && hasDDL) {
                 // 双点：左紫（事件）右红（DDL）
-                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::PrimaryMid));
+                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::PrimaryMid));
                 p.drawEllipse(QPointF(r.center().x() - 4.0, r.bottom() - 4.0), 2.0, 2.0);
-                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::EventCoralBar));
+                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::EventCoralBar));
                 p.drawEllipse(QPointF(r.center().x() + 4.0, r.bottom() - 4.0), 2.0, 2.0);
             } else if (hasDDL) {
-                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::EventCoralBar));
+                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::EventCoralBar));
                 p.drawEllipse(QPointF(r.center().x(), r.bottom() - 4.0), 2.0, 2.0);
             } else if (hasEvent) {
-                p.setBrush(isSelected ? QColor(Qt::white) : QColor(Theme::PrimaryMid));
+                p.setBrush(isSelected ? QColor(Theme::BgPrimary) : QColor(Theme::PrimaryMid));
                 p.drawEllipse(QPointF(r.center().x(), r.bottom() - 4.0), 2.0, 2.0);
             }
         }

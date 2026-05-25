@@ -36,6 +36,7 @@ void Application::start() {
     m_petWidget->show();
 
     connect(m_mainMenu, &MainMenu::petSelected, m_petWidget, &PetWidget::loadPet);
+    connect(m_mainMenu, &MainMenu::petScaleChanged, m_petWidget, &PetWidget::setPetScale);
 
     // PetWidget ↔ PetStateManager
     connect(m_petWidget, &PetWidget::dragStarted,        &m_petStateManager, &PetStateManager::onDragStarted);

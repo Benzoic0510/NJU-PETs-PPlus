@@ -21,7 +21,8 @@ class CalendarPanel : public QWidget {
     Q_OBJECT
 
 public:
-    explicit CalendarPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr);
+    explicit CalendarPanel(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr, bool embedContextPanel = true);
+    QWidget *contextPanel() const { return m_contextPanel; }
 
 public slots:
     void refresh();
@@ -36,7 +37,7 @@ private slots:
     void onAddClicked();
 
 private:
-    void setupUi(NLPService *nlp);
+    void setupUi(NLPService *nlp, bool embedContextPanel);
     void repositionEditPanel();
     void loadDay(const QDate &date);
     void updateUpcoming();
@@ -44,6 +45,7 @@ private:
     ScheduleService    *m_svc      = nullptr;
     QDate               m_selDate;
 
+    QWidget            *m_contextPanel = nullptr;
     MiniCalendar       *m_miniCal      = nullptr;
     TimelineView       *m_timeline     = nullptr;
     QLabel             *m_dateLabel    = nullptr;
