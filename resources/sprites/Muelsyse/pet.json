@@ -3,6 +3,13 @@
   "states": {
     "idle":  { "rows": 6, "cols": 10 },
     "greet": { "rows": 6, "cols": 10 },
-    "sleep": { "rows": 6, "cols": 10 }
+    "sleep": {
+      "rows": 6, "cols": 10,
+      "segments": {
+        "falling": { "start": 0,  "end": 14 },
+        "looping": { "start": 15, "end": 44 },
+        "waking":  { "start": 45, "end": 59 }
+      }
+    }
   }
 }

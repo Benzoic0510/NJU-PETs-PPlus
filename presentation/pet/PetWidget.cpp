@@ -74,24 +74,26 @@ void PetWidget::onStateChanged(const QString &state) {
 void PetWidget::startSleepSequence() {
     m_sleepPhase  = SleepFalling;
     m_wakePending = false;
-    const auto g = SkinManifest::instance().gridFor(m_petId, "sleep");
+    const auto seg = SkinManifest::instance().sleepSegmentsFor(m_petId);
+    const auto g   = SkinManifest::instance().gridFor(m_petId, "sleep");
     m_animator.load(m_petId, "sleep", g.rows, g.cols);
-    m_animator.playOnce(0, kFallingLast + 1);  // frames 0-14
+    m_animator.playOnce(seg.fallingStart, seg.fallingEnd + 1);
 }
 
 void PetWidget::onSegmentFinished() {
+    const auto seg = SkinManifest::instance().sleepSegmentsFor(m_petId);
+
     switch (m_sleepPhase) {
     case SleepFalling:
         m_sleepPhase = SleepLooping;
-        m_animator.setSegment(kLoopStart, kLoopLast + 1);  // loop frames 15-44
+        m_animator.setSegment(seg.loopStart, seg.loopEnd + 1);
         break;
     case SleepLooping:
         if (m_wakePending) {
             m_sleepPhase  = SleepWaking;
             m_wakePending = false;
-            m_animator.playOnce(kWakeStart, kWakeLast + 1);  // frames 45-59
+            m_animator.playOnce(seg.wakeStart, seg.wakeEnd + 1);
         }
-        // else: setSegment keeps looping, segmentFinished fires each loop
         break;
     case SleepWaking:
         m_sleepPhase = SleepNone;

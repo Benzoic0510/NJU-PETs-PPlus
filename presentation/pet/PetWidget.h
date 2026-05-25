@@ -58,11 +58,6 @@ private:
     bool       m_wakePending = false;
 
     static constexpr int DragThreshold = 4;
-    static constexpr int kFallingLast  = 14;   // frames 0-14: 入睡
-    static constexpr int kLoopStart    = 15;   // frames 15-44: 睡眠循环
-    static constexpr int kLoopLast     = 44;
-    static constexpr int kWakeStart    = 45;   // frames 45-59: 醒来
-    static constexpr int kWakeLast     = 59;
 };
 
 #endif // PETWIDGET_H

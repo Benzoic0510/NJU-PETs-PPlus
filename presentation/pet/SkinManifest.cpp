@@ -25,17 +25,35 @@ void SkinManifest::loadSkin(const QString &petId) {
     const QJsonObject root = QJsonDocument::fromJson(f.readAll()).object();
     const QJsonObject states = root["states"].toObject();
 
-    QHash<QString, StateGrid> map;
+    QHash<QString, StateGrid> grids;
     for (auto it = states.begin(); it != states.end(); ++it) {
-        const QJsonObject g = it.value().toObject();
-        map[it.key()] = {g["rows"].toInt(1), g["cols"].toInt(1)};
+        const QJsonObject obj = it.value().toObject();
+        grids[it.key()] = {obj["rows"].toInt(1), obj["cols"].toInt(1)};
     }
-    m_skins[petId] = map;
+    m_grids[petId] = grids;
+
+    // 睡眠分段（可选）
+    const QJsonObject sleepObj = states["sleep"].toObject();
+    const QJsonObject seg      = sleepObj["segments"].toObject();
+    if (!seg.isEmpty()) {
+        SleepSegments ss;
+        const QJsonObject falling = seg["falling"].toObject();
+        const QJsonObject looping = seg["looping"].toObject();
+        const QJsonObject waking  = seg["waking"].toObject();
+        ss.fallingStart = falling["start"].toInt(0);
+        ss.fallingEnd   = falling["end"].toInt(0);
+        ss.loopStart    = looping["start"].toInt(0);
+        ss.loopEnd      = looping["end"].toInt(0);
+        ss.wakeStart    = waking["start"].toInt(0);
+        ss.wakeEnd      = waking["end"].toInt(0);
+        ss.valid        = true;
+        m_sleepSegments[petId] = ss;
+    }
 }
 
 GridInfo SkinManifest::gridFor(const QString &petId, const QString &state) const {
-    const auto itPet = m_skins.constFind(petId);
-    if (itPet != m_skins.constEnd()) {
+    const auto itPet = m_grids.constFind(petId);
+    if (itPet != m_grids.constEnd()) {
         const auto itSt = itPet->constFind(state);
         if (itSt != itPet->constEnd())
             return {itSt->rows, itSt->cols};
@@ -43,6 +61,10 @@ GridInfo SkinManifest::gridFor(const QString &petId, const QString &state) const
     return {1, 0};
 }
 
+SleepSegments SkinManifest::sleepSegmentsFor(const QString &petId) const {
+    return m_sleepSegments.value(petId);
+}
+
 QStringList SkinManifest::skins() const {
-    return m_skins.keys();
+    return m_grids.keys();
 }
