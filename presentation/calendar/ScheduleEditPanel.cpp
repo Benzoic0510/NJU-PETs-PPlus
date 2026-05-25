@@ -49,13 +49,20 @@ protected:
             if (event->type() == QEvent::MouseMove) {
                 auto *mouseEvent = static_cast<QMouseEvent *>(event);
                 const QModelIndex index = m_calendarView->indexAt(mouseEvent->pos());
-                const QDate date = (index.isValid() && index.row() > 0)
-                    ? dateForCell(index.row(), index.column())
-                    : QDate();
+                const QDate date = dateForIndex(index);
                 if (date != m_hoveredDate) {
                     m_hoveredDate = date;
                     update();
                 }
+            } else if (event->type() == QEvent::MouseButtonPress) {
+                auto *mouseEvent = static_cast<QMouseEvent *>(event);
+                const QModelIndex index = m_calendarView->indexAt(mouseEvent->pos());
+                const QDate date = dateForIndex(index);
+                if (!date.isValid())
+                    return true;
+                setSelectedDate(date);
+                emit clicked(date);
+                return true;
             } else if (event->type() == QEvent::Leave) {
                 if (m_hoveredDate.isValid()) {
                     m_hoveredDate = QDate();
@@ -71,17 +78,18 @@ protected:
         painter->setRenderHint(QPainter::Antialiasing);
         painter->fillRect(rect, QColor(Theme::BgPrimary));
 
-        const bool isCurrentMonth = date.year() == yearShown() && date.month() == monthShown();
-        const bool isSelected = date == selectedDate();
-        const bool isToday = date == QDate::currentDate();
-        const bool isHovered = date == m_hoveredDate && isCurrentMonth && !isSelected;
+        const QDate displayDate = displayDateForCellDate(date);
+        const bool isCurrentMonth = isCurrentPageDate(displayDate);
+        const bool isSelected = displayDate == selectedDate();
+        const bool isToday = displayDate == QDate::currentDate();
+        const bool isHovered = displayDate == m_hoveredDate && !isSelected;
         const QRectF bgRect = QRectF(rect).adjusted(4, 3, -4, -3);
 
         if (isSelected) {
             painter->setPen(Qt::NoPen);
             painter->setBrush(QColor(Theme::Primary));
             painter->drawRoundedRect(bgRect, 6, 6);
-        } else if (isHovered) {
+        } else if (isHovered && isCurrentMonth) {
             painter->setPen(Qt::NoPen);
             painter->setBrush(QColor(Theme::PrimaryBg));
             painter->drawRoundedRect(bgRect, 6, 6);
@@ -107,15 +115,66 @@ protected:
             painter->setPen(QColor(Theme::TextSecondary));
         }
 
-        painter->drawText(rect, Qt::AlignCenter, QString::number(date.day()));
+        painter->drawText(rect, Qt::AlignCenter, QString::number(displayDate.day()));
         painter->restore();
     }
 
 private:
-    QDate dateForCell(int row, int column) const {
+    bool isCurrentPageDate(const QDate &date) const {
+        return date.isValid() && date.year() == yearShown() && date.month() == monthShown();
+    }
+
+    QDate dateForIndex(const QModelIndex &index) const {
+        if (!m_calendarView || !index.isValid()) return {};
+
+        const int firstRow = firstDateRow();
+        if (index.row() < firstRow) return {};
+
+        QDate date = firstGridDate(firstRow);
+        if (!date.isValid()) return {};
+
+        date = date.addDays((index.row() - firstRow) * 7 + index.column());
+        if (shouldSkipLeadingWeek())
+            date = date.addDays(7);
+        return date;
+    }
+
+    QDate displayDateForCellDate(const QDate &date) const {
+        return shouldSkipLeadingWeek() ? date.addDays(7) : date;
+    }
+
+    bool shouldSkipLeadingWeek() const {
+        const int firstRow = firstDateRow();
+        const QDate gridStart = firstGridDate(firstRow);
+        if (!gridStart.isValid()) return false;
         const QDate firstOfMonth(yearShown(), monthShown(), 1);
-        const int offset = (firstOfMonth.dayOfWeek() - static_cast<int>(firstDayOfWeek()) + 7) % 7;
-        return firstOfMonth.addDays((row - 1) * 7 + column - offset);
+        return gridStart.addDays(6) < firstOfMonth;
+    }
+
+    int firstDateRow() const {
+        if (!m_calendarView || !m_calendarView->model()) return 0;
+        for (int row = 0; row < m_calendarView->model()->rowCount(); ++row) {
+            for (int col = 0; col < m_calendarView->model()->columnCount(); ++col) {
+                bool ok = false;
+                m_calendarView->model()->index(row, col).data(Qt::DisplayRole).toString().toInt(&ok);
+                if (ok) return row;
+            }
+        }
+        return 0;
+    }
+
+    QDate firstGridDate(int firstRow) const {
+        if (!m_calendarView || !m_calendarView->model()) return {};
+
+        const QString text = m_calendarView->model()->index(firstRow, 0).data(Qt::DisplayRole).toString();
+        bool ok = false;
+        const int day = text.toInt(&ok);
+        if (!ok) return {};
+
+        const QDate firstOfMonth(yearShown(), monthShown(), 1);
+        if (day > 7)
+            return firstOfMonth.addMonths(-1).addDays(day - 1);
+        return QDate(yearShown(), monthShown(), day);
     }
 
     QAbstractItemView *m_calendarView = nullptr;
