@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>sprites/Muelsyse_idle.png</file>
+        <file>sprites/Muelsyse/idle.png</file>
     </qresource>
 </RCC>
