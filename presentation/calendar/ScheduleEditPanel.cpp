@@ -48,7 +48,7 @@ protected:
         if (m_calendarView && watched == m_calendarView->viewport()) {
             if (event->type() == QEvent::MouseMove) {
                 auto *mouseEvent = static_cast<QMouseEvent *>(event);
-                const QModelIndex index = m_calendarView->indexAt(mouseEvent->pos());
+                const QModelIndex index = m_calendarView->indexAt(mouseEvent->position().toPoint());
                 const QDate date = dateForIndex(index);
                 if (date != m_hoveredDate) {
                     m_hoveredDate = date;
@@ -56,7 +56,7 @@ protected:
                 }
             } else if (event->type() == QEvent::MouseButtonPress) {
                 auto *mouseEvent = static_cast<QMouseEvent *>(event);
-                const QModelIndex index = m_calendarView->indexAt(mouseEvent->pos());
+                const QModelIndex index = m_calendarView->indexAt(mouseEvent->position().toPoint());
                 const QDate date = dateForIndex(index);
                 if (!date.isValid())
                     return true;

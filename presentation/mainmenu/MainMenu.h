@@ -29,9 +29,6 @@ class MainMenu : public QWidget {
 public:
     explicit MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr);
 
-public slots:
-    void refreshSchedules();
-
 signals:
     void petSelected(const QString &petId);
     void petScaleChanged(int scale);

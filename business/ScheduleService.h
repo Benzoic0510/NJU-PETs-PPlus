@@ -21,9 +21,9 @@ public:
     bool updateSchedule(const Schedule &s);
     bool removeSchedule(int id);
 
-    Schedule          getSchedule(int id);
-    QVector<Schedule> getAll();
-    QVector<Schedule> getByDateRange(const QDateTime &from, const QDateTime &to);
+    Schedule          getSchedule(int id) const;
+    QVector<Schedule> getAll() const;
+    QVector<Schedule> getByDateRange(const QDateTime &from, const QDateTime &to) const;
 
 signals:
     void scheduleAdded(int id);

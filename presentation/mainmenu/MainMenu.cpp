@@ -19,14 +19,12 @@
 #include <QPixmap>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
-#include <QScrollArea>
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QVariantAnimation>
 #include <QVBoxLayout>
 
 #include <functional>
-#include <algorithm>
 #include <memory>
 
 namespace {
@@ -918,7 +916,7 @@ QWidget *MainMenu::makeSettingsContext(SettingsPanel *settingsPanel) {
     auto *group = new QButtonGroup(page);
     group->setExclusive(true);
 
-    const QStringList labels = {"宠物", "日程", "1", "2"};
+    const QStringList labels = {"宠物", "日程"};
     for (int i = 0; i < labels.size(); ++i) {
         auto *btn = makeContextBtn(labels[i]);
         auto *host = new SettingsTagHost(btn, page);
@@ -958,9 +956,7 @@ QWidget *MainMenu::makePlaceholder(const QString &text) {
     return w;
 }
 
-void MainMenu::refreshSchedules() {
-    // CalendarPanel 实现后在此刷新
-}
+
 
 void MainMenu::switchPage(int id) {
     if (!m_stack || !m_contextStack) return;
