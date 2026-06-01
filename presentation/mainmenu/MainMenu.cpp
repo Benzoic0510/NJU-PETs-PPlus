@@ -842,12 +842,12 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     m_contextStack->addWidget(makePetContext());                 // 0 启动
     m_contextStack->addWidget(scheduleContextReveal);            // 1 日程
     m_contextStack->addWidget(makeSettingsContext(settingsPanel));// 2 设置
-    m_contextStack->addWidget(new QWidget);                      // 3 其他
+    m_contextStack->addWidget(makeAboutContext());               // 3 其他
 
     m_stack->addWidget(selector);                                // 0 启动
     m_stack->addWidget(calendarPanel);                           // 1 日程
     m_stack->addWidget(settingsPanel);                           // 2 设置
-    m_stack->addWidget(new QWidget);                             // 3 其他
+    m_stack->addWidget(makeAboutPage());                         // 3 其他
 
     surfaceLayout->addWidget(m_stack);
     rightWrapLayout->addWidget(m_rightSurface);
@@ -959,7 +959,81 @@ QWidget *MainMenu::makePlaceholder(const QString &text) {
     return w;
 }
 
+QWidget *MainMenu::makeAboutContext() {
+    auto *page = new QWidget;
+    auto *root = new QVBoxLayout(page);
+    root->setContentsMargins(14, 22, 14, 18);
+    root->setSpacing(4);
 
+    auto *title = new QLabel("关于");
+    title->setStyleSheet(
+        "font-size:11px; font-weight:500; letter-spacing:0.04em; text-transform:uppercase;"
+        "color:" + QString(Theme::TextTertiary) + "; padding:0 12px; border:none; background:transparent;");
+    root->addWidget(title);
+    root->addStretch();
+    return page;
+}
+
+QWidget *MainMenu::makeAboutPage() {
+    auto *page = new QWidget;
+    auto *root = new QVBoxLayout(page);
+    root->setContentsMargins(18, 18, 18, 18);
+    root->setSpacing(14);
+
+    auto makeCard = [](const QString &title, const QStringList &lines, const QString &colorAccent) {
+        auto *card = new QWidget;
+        card->setObjectName("aboutCard");
+        card->setStyleSheet(
+            "#aboutCard { background:" + QString(Theme::BgPrimary) + ";"
+            "  border: 1px solid " + Theme::Border + ";"
+            "  border-radius: 8px; }");
+
+        auto *lay = new QVBoxLayout(card);
+        lay->setContentsMargins(20, 16, 20, 16);
+        lay->setSpacing(8);
+
+        auto *titleLabel = new QLabel(title);
+        titleLabel->setStyleSheet(
+            "font-size:14px; font-weight:700; color:" + QString(Theme::TextPrimary) + ";"
+            "background:transparent; border:none;");
+        lay->addWidget(titleLabel);
+
+        for (const auto &line : lines) {
+            auto *lbl = new QLabel(line);
+            lbl->setWordWrap(true);
+            lbl->setStyleSheet(
+                "font-size:13px; color:" + QString(Theme::TextSecondary) + ";"
+                "line-height:1.6; background:transparent; border:none;");
+            lay->addWidget(lbl);
+        }
+        return card;
+    };
+
+    root->addWidget(makeCard("NJU-PETs++",
+        {"桌面宠物 × 日程管理，为日常学习生活增添一点陪伴感。",
+         "项目选题：《人机交互》课程设计，南京大学。"},
+        Theme::Primary));
+
+    root->addWidget(makeCard("交互设计",
+        {"• 自然语言交互 — 右键宠物，用日常语言创建日程，无需记忆语法",
+         "• 直接操纵 — 拖拽宠物移动，点击互动，符合直觉的操作方式",
+         "• 视觉反馈 — 宠物动画、页面转场、卡片动画，让每次操作都有回应",
+         "• 降低认知负荷 — 日历视图的视觉层级、事件颜色编码、迷你日历摘要"},
+        Theme::PrimaryMid));
+
+    root->addWidget(makeCard("技术栈",
+        {"C++17 · Qt 6 Widgets · SQLite · 通义千问 API（DashScope）· CMake"},
+        Theme::TextTertiary));
+
+    root->addStretch();
+
+    auto *footer = new QLabel("NJU-PETs++  v0.1  ·  南京大学 2026");
+    footer->setStyleSheet(
+        "font-size:12px; color:" + QString(Theme::TextTertiary) + "; border:none; background:transparent;");
+    root->addWidget(footer);
+
+    return page;
+}
 
 void MainMenu::switchPage(int id) {
     if (!m_stack || !m_contextStack) return;

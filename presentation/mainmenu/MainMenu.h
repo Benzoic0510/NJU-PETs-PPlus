@@ -44,6 +44,8 @@ private:
     QPushButton *makeContextBtn(const QString &text);
     QWidget     *makePlaceholder(const QString &text);
     QWidget     *makePetContext();
+    QWidget     *makeAboutContext();
+    QWidget     *makeAboutPage();
     QWidget     *makeSettingsContext(class SettingsPanel *settingsPanel);
     void         switchPage(int id);
     void         completePageSwitch(int id);
