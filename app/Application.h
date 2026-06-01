@@ -25,6 +25,7 @@ public:
 
 private:
     Application();
+    ~Application();
     Application(const Application &) = delete;
     Application &operator=(const Application &) = delete;
 
@@ -41,6 +42,7 @@ private:
     PetWidget         *m_petWidget    = nullptr;
     BubbleWidget      *m_bubbleWidget = nullptr;
     QSystemTrayIcon   *m_trayIcon     = nullptr;
+    QMenu             *m_trayMenu     = nullptr;
 };
 
 #endif //APPLICATION_H

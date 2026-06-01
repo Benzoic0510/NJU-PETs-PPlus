@@ -29,9 +29,6 @@ class MainMenu : public QWidget {
 public:
     explicit MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr);
 
-public slots:
-    void refreshSchedules();
-
 signals:
     void petSelected(const QString &petId);
     void petScaleChanged(int scale);
@@ -47,6 +44,8 @@ private:
     QPushButton *makeContextBtn(const QString &text);
     QWidget     *makePlaceholder(const QString &text);
     QWidget     *makePetContext();
+    QWidget     *makeAboutContext();
+    QWidget     *makeAboutPage();
     QWidget     *makeSettingsContext(class SettingsPanel *settingsPanel);
     void         switchPage(int id);
     void         completePageSwitch(int id, quint64 token);

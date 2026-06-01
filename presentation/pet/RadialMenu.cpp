@@ -156,13 +156,13 @@ void RadialMenu::paintEvent(QPaintEvent *) {
 
 void RadialMenu::mouseMoveEvent(QMouseEvent *event) {
     const int prev = m_hovered;
-    m_hovered = itemAt(event->pos());
+    m_hovered = itemAt(event->position().toPoint());
     if (m_hovered != prev) update();
 }
 
 void RadialMenu::mousePressEvent(QMouseEvent *event) {
     if (event->button() != Qt::LeftButton) { hide(); return; }
-    const int idx = itemAt(event->pos());
+    const int idx = itemAt(event->position().toPoint());
     hide();
     if (idx >= 0) emit triggered(idx);
 }

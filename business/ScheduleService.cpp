@@ -29,15 +29,15 @@ bool ScheduleService::removeSchedule(int id) {
     return ok;
 }
 
-Schedule ScheduleService::getSchedule(int id) {
+Schedule ScheduleService::getSchedule(int id) const {
     return m_repo.getById(id);
 }
 
-QVector<Schedule> ScheduleService::getAll() {
+QVector<Schedule> ScheduleService::getAll() const {
     return m_repo.getAll();
 }
 
-QVector<Schedule> ScheduleService::getByDateRange(const QDateTime &from, const QDateTime &to) {
+QVector<Schedule> ScheduleService::getByDateRange(const QDateTime &from, const QDateTime &to) const {
     return m_repo.getByDateRange(from, to);
 }
 

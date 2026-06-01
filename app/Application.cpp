@@ -18,6 +18,14 @@ Application &Application::instance() {
 
 Application::Application() {}
 
+Application::~Application() {
+    delete m_bubbleWidget;
+    delete m_petWidget;
+    delete m_mainMenu;
+    delete m_trayMenu;
+    m_trayIcon->setContextMenu(nullptr);
+}
+
 void Application::start() {
     AppConfig::instance().load();
 
@@ -81,11 +89,11 @@ void Application::setupTrayIcon() {
     m_trayIcon = new QSystemTrayIcon(icon, this);
     m_trayIcon->setToolTip("NJU-PETs++");
 
-    auto *menu    = new QMenu;
-    auto *showAct = menu->addAction("显示主面板");
-    menu->addSeparator();
-    auto *quitAct = menu->addAction("退出");
-    m_trayIcon->setContextMenu(menu);
+    m_trayMenu    = new QMenu;
+    auto *showAct = m_trayMenu->addAction("显示主面板");
+    m_trayMenu->addSeparator();
+    auto *quitAct = m_trayMenu->addAction("退出");
+    m_trayIcon->setContextMenu(m_trayMenu);
 
     connect(showAct, &QAction::triggered, this, [this]() {
         m_mainMenu->show();
