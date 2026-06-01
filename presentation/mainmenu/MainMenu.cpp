@@ -937,7 +937,11 @@ QWidget *MainMenu::makeSettingsContext(SettingsPanel *settingsPanel) {
     m_settingsIndicator->hide();
 
     connect(group, &QButtonGroup::idClicked, this, [this, settingsPanel](int id) {
-        m_settingsCurrentIndex = qBound(0, id, m_settingsTagHosts.size() - 1);
+        const int targetIndex = qBound(0, id, m_settingsTagHosts.size() - 1);
+        if (targetIndex == m_settingsCurrentIndex)
+            return;
+
+        m_settingsCurrentIndex = targetIndex;
         settingsPanel->setCategory(id);
         moveSettingsIndicator(m_settingsCurrentIndex, true);
     });

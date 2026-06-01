@@ -422,7 +422,11 @@ QWidget *SettingsPanel::makeSchedulePage() {
 
 void SettingsPanel::setCategory(int index) {
     if (!m_stack) return;
-    m_stack->setCurrentIndex(qBound(0, index, m_stack->count() - 1));
+    const int targetIndex = qBound(0, index, m_stack->count() - 1);
+    if (targetIndex == m_stack->currentIndex())
+        return;
+
+    m_stack->setCurrentIndex(targetIndex);
     prepareGroupsEnter();
     QTimer::singleShot(0, this, [this]() {
         playGroupsEnter();
