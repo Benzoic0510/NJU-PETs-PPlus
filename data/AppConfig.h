@@ -29,9 +29,6 @@ public:
     bool reminderEnabled() const;
     void setReminderEnabled(bool on);
 
-    int volume() const;
-    void setVolume(int vol);
-
     QString apiKey() const;
     void setApiKey(const QString &key);
 
@@ -47,7 +44,6 @@ private:
     int m_petSleepThresholdMins = 5;
     bool m_petInteractionDisabled = false;
     bool m_reminderEnabled = true;
-    int m_volume = 80;
     QString m_apiKey;
 };
 

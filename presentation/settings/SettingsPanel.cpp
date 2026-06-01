@@ -414,30 +414,6 @@ QWidget *SettingsPanel::makeSchedulePage() {
     });
     reminderLayout->addWidget(makeSettingRow("是否启用日程提醒", m_reminderCheck));
 
-    auto *volWidget = new QWidget;
-    auto *volRow = new QHBoxLayout(volWidget);
-    volRow->setContentsMargins(0, 0, 0, 0);
-    volRow->setSpacing(8);
-
-    m_volumeSlider = new QSlider(Qt::Horizontal);
-    m_volumeSlider->setRange(0, 100);
-    m_volumeSlider->setValue(AppConfig::instance().volume());
-
-    m_volumeLabel = new QLabel(QString::number(AppConfig::instance().volume()));
-    m_volumeLabel->setFixedWidth(28);
-    m_volumeLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_volumeLabel->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
-
-    connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int v) {
-        m_volumeLabel->setText(QString::number(v));
-        AppConfig::instance().setVolume(v);
-        AppConfig::instance().save();
-    });
-
-    volRow->addWidget(m_volumeSlider, 1);
-    volRow->addWidget(m_volumeLabel);
-    reminderLayout->addWidget(makeSettingRow("提醒音量", volWidget));
-
     root->addWidget(apiGroup);
     root->addWidget(reminderGroup);
     root->addStretch();

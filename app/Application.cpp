@@ -62,8 +62,6 @@ void Application::start() {
     connect(m_bubbleWidget, &BubbleWidget::submitted,           &m_nlpService,  &NLPService::parse);
     connect(&m_nlpService,  &NLPService::parseFailed,           m_bubbleWidget, &BubbleWidget::showError);
     connect(&m_nlpService,  &NLPService::clarificationNeeded,   m_bubbleWidget, &BubbleWidget::showClarification);
-    connect(&m_reminderService, &ReminderService::remind,       m_bubbleWidget, &BubbleWidget::showReminder);
-
     // 环形菜单：面板 / 退出
     connect(m_petWidget, &PetWidget::showMainMenuRequested, this, [this]() {
         m_mainMenu->show();
@@ -110,11 +108,22 @@ void Application::setupTrayIcon() {
 }
 
 void Application::connectSignals() {
-    // 提醒触发 → 宠物进入 interact 状态 + 系统提示音
+    // 提醒触发 → 宠物进入 interact 状态 + 系统通知
     connect(&m_reminderService, &ReminderService::remind,
             &m_petStateManager,  &PetStateManager::onRemind);
-    connect(&m_reminderService, &ReminderService::remind,
-            this, [](const Schedule &) { QApplication::beep(); });
+    connect(&m_reminderService, &ReminderService::remind, this, [this](const Schedule &s) {
+        if (!m_trayIcon)
+            return;
+
+        const QString title = s.isDDL ? "DDL 提醒" : "日程提醒";
+        QString message = s.isDDL
+            ? QString("%1\n截止：%2").arg(s.title, s.startTime.toString("MM月dd日 HH:mm"))
+            : QString("%1\n时间：%2").arg(s.title, s.startTime.toString("MM月dd日 HH:mm"));
+        if (!s.location.isEmpty())
+            message += "\n地点：" + s.location;
+
+        m_trayIcon->showMessage(title, message, QSystemTrayIcon::Information, 8000);
+    });
 
     // NLP 解析完成 → 尝试添加日程，成功显示 showResponse，冲突显示 showError
     connect(&m_nlpService, &NLPService::parsed,
@@ -132,7 +141,7 @@ void Application::connectSignals() {
     // 其余表现层信号槽在各组件创建后逐步补充：
     // PetWidget::nlpRequested → NLPService::parse
     // PetStateManager::stateChanged → PetWidget::onStateChanged
-    // ReminderService::remind → BubbleWidget::showReminder
+    // ReminderService::remind → system tray notification
     // ScheduleService signals → CalendarPanel::refresh
     // NLPService::parseFailed → BubbleWidget::showError
 }

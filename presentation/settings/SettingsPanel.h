@@ -51,8 +51,6 @@ private:
     QLabel     *m_sleepThresholdLabel  = nullptr;
     QCheckBox  *m_interactionDisabledCheck = nullptr;
     QLineEdit  *m_apiKeyEdit    = nullptr;
-    QSlider    *m_volumeSlider  = nullptr;
-    QLabel     *m_volumeLabel   = nullptr;
     QCheckBox  *m_reminderCheck = nullptr;
     QPushButton *m_saveBtn      = nullptr;
 };

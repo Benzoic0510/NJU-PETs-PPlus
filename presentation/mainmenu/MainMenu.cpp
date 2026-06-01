@@ -918,7 +918,7 @@ QWidget *MainMenu::makeSettingsContext(SettingsPanel *settingsPanel) {
     auto *group = new QButtonGroup(page);
     group->setExclusive(true);
 
-    const QStringList labels = {"宠物", "日程", "1", "2"};
+    const QStringList labels = {"宠物", "日程"};
     for (int i = 0; i < labels.size(); ++i) {
         auto *btn = makeContextBtn(labels[i]);
         auto *host = new SettingsTagHost(btn, page);

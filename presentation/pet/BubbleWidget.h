@@ -24,7 +24,6 @@ public:
     void showResponse(const Schedule &s);
     void showError(const QString &msg);
     void showClarification(const QString &msg);
-    void showReminder(const Schedule &s);
     void dismiss();
 
 signals:

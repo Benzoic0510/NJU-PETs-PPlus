@@ -123,18 +123,6 @@ void BubbleWidget::showClarification(const QString &msg) {
     updateLayout();
 }
 
-void BubbleWidget::showReminder(const Schedule &s) {
-    if (m_inChat) return;  // 不打断正在进行的对话
-    m_hasOutput = false;
-    m_edit->hide();
-    m_loading->hide();
-    m_output->setText(QString("提醒：%1 即将开始").arg(s.title));
-    m_output->show();
-    updateLayout();
-    show();
-    m_timer.start(5000);
-}
-
 void BubbleWidget::dismiss() {
     m_hasOutput = false;
     m_inChat = false;
