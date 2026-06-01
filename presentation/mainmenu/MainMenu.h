@@ -21,6 +21,7 @@
 #include <functional>
 
 class CalendarPanel;
+class OtherPanel;
 class SettingsPanel;
 
 class MainMenu : public QWidget {
@@ -44,8 +45,7 @@ private:
     QPushButton *makeContextBtn(const QString &text);
     QWidget     *makePlaceholder(const QString &text);
     QWidget     *makePetContext();
-    QWidget     *makeAboutContext();
-    QWidget     *makeAboutPage();
+    QWidget     *makeOtherContext(class OtherPanel *otherPanel);
     QWidget     *makeSettingsContext(class SettingsPanel *settingsPanel);
     void         switchPage(int id);
     void         completePageSwitch(int id, quint64 token);
@@ -54,6 +54,9 @@ private:
     void         prepareSettingsContextEnter();
     void         playSettingsContextEnter();
     void         moveSettingsIndicator(int index, bool animated);
+    void         prepareOtherContextEnter();
+    void         playOtherContextEnter();
+    void         moveOtherIndicator(int index, bool animated);
     void         animateContextWidth(int targetWidth);
     void         prepareRightSurfaceEnter(int id);
     void         playRightSurfaceEnter(int id, quint64 token);
@@ -71,14 +74,20 @@ private:
     QWidget        *m_scheduleReveal = nullptr;
     QWidget        *m_settingsContext = nullptr;
     QWidget        *m_settingsIndicator = nullptr;
+    QWidget        *m_otherContext = nullptr;
+    QWidget        *m_otherIndicator = nullptr;
     QVector<QWidget *> m_settingsTagHosts;
+    QVector<QWidget *> m_otherTagHosts;
     CalendarPanel  *m_calendarPanel = nullptr;
     SettingsPanel  *m_settingsPanel = nullptr;
+    OtherPanel     *m_otherPanel = nullptr;
     QVariantAnimation *m_contextWidthAnim = nullptr;
     QVariantAnimation *m_rightSurfaceHeightAnim = nullptr;
     QVariantAnimation *m_settingsIndicatorAnim = nullptr;
+    QVariantAnimation *m_otherIndicatorAnim = nullptr;
     int             m_currentPage = 0;
     int             m_settingsCurrentIndex = 0;
+    int             m_otherCurrentIndex = 0;
     int             m_pendingPage = -1;
     quint64         m_switchToken = 0;
     bool            m_pageSwitching = false;

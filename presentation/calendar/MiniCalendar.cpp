@@ -14,7 +14,7 @@ static QString navBtnStyle() {
     return QString(
         "QPushButton {"
         "  border: 1px solid %1; border-radius: 6px;"
-        "  background: transparent; font-size: 16px; color: %2;"
+        "  background: transparent; font-size: 17px; color: %2;"
         "}"
         "QPushButton:hover { background: %3; }")
         .arg(Theme::Border)
@@ -36,7 +36,7 @@ MiniCalendar::MiniCalendar(QWidget *parent)
     m_titleLabel = new QLabel(this);
     m_titleLabel->setAlignment(Qt::AlignCenter);
     m_titleLabel->setStyleSheet(
-        QString("font-size: 14px; font-weight: 500; color: %1;").arg(Theme::TextPrimary));
+        QString("font-size: 15px; font-weight: 500; color: %1;").arg(Theme::TextPrimary));
 
     m_nextBtn = new QPushButton("›", this);
     m_nextBtn->setFixedSize(28, 28);

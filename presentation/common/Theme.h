@@ -51,6 +51,9 @@ inline constexpr int WindowW      = 960;
 inline constexpr int WindowH      = 620;
 inline constexpr int Radius       = 8;
 
+// ── Typography ───────────────────────────────────────────
+inline constexpr int AppFontPointSize = 10;
+
 } // namespace Theme
 
 #endif // THEME_H

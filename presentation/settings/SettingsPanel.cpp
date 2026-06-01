@@ -232,7 +232,7 @@ QWidget *SettingsPanel::makeGroup(const QString &title) {
 
     auto *titleLabel = new QLabel(title, group);
     titleLabel->setStyleSheet(
-        "font-size: 13px; font-weight: 700;"
+        "font-size: 14px; font-weight: 700;"
         "color:" + QString(Theme::TextPrimary) + ";"
         "background: transparent; border: none;");
     root->addWidget(titleLabel);
@@ -251,7 +251,7 @@ QWidget *SettingsPanel::makeSettingRow(const QString &label, QWidget *control) {
     auto *labelWidget = new QLabel(label, row);
     labelWidget->setMinimumWidth(148);
     labelWidget->setStyleSheet(
-        "font-size: 13px;"
+        "font-size: 14px;"
         "color:" + QString(Theme::TextSecondary) + ";"
         "background: transparent; border: none;");
     layout->addWidget(labelWidget);
@@ -281,7 +281,7 @@ QWidget *SettingsPanel::makePetPage() {
     m_petScaleLabel = new QLabel(QString("%1%").arg(AppConfig::instance().petScale()));
     m_petScaleLabel->setFixedWidth(44);
     m_petScaleLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_petScaleLabel->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+    m_petScaleLabel->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
 
     connect(m_petScaleSlider, &QSlider::valueChanged, this, [this](int v) {
         m_petScaleLabel->setText(QString("%1%").arg(v));
@@ -306,7 +306,7 @@ QWidget *SettingsPanel::makePetPage() {
     m_sleepThresholdLabel = new QLabel(QString("%1 分钟").arg(AppConfig::instance().petSleepThresholdMins()));
     m_sleepThresholdLabel->setFixedWidth(58);
     m_sleepThresholdLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_sleepThresholdLabel->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+    m_sleepThresholdLabel->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
 
     connect(m_sleepThresholdSlider, &QSlider::valueChanged, this, [this](int v) {
         m_sleepThresholdLabel->setText(QString("%1 分钟").arg(v));
@@ -325,7 +325,7 @@ QWidget *SettingsPanel::makePetPage() {
 
     m_interactionDisabledCheck = new QCheckBox("禁止与宠物交互");
     m_interactionDisabledCheck->setChecked(AppConfig::instance().petInteractionDisabled());
-    m_interactionDisabledCheck->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
+    m_interactionDisabledCheck->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextSecondary) + ";");
     connect(m_interactionDisabledCheck, &QCheckBox::toggled, this, [this](bool checked) {
         AppConfig::instance().setPetInteractionDisabled(checked);
         AppConfig::instance().save();
@@ -370,7 +370,7 @@ QWidget *SettingsPanel::makeSchedulePage() {
     toggleBtn->setFixedSize(48, KeyRowH);
     toggleBtn->setStyleSheet(
         "QPushButton { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 6px; font-size: 12px; background: none;"
+        "  border-radius: 6px; font-size: 13px; background: none;"
         "  color: " + Theme::TextSecondary + "; }"
         "QPushButton:hover { background: " + Theme::BgSecondary + "; }");
     connect(toggleBtn, &QPushButton::toggled, this, [this, toggleBtn](bool on) {
@@ -385,7 +385,7 @@ QWidget *SettingsPanel::makeSchedulePage() {
 
     if (envSet) {
         auto *envHint = new QLabel("已检测到环境变量 DASHSCOPE_API_KEY，运行时优先使用，此处不可编辑。");
-        envHint->setStyleSheet("font-size: 11px; color: " + QString(Theme::TextTertiary) + ";");
+        envHint->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextTertiary) + ";");
         envHint->setWordWrap(true);
         keyVl->addWidget(envHint);
     }
@@ -396,7 +396,7 @@ QWidget *SettingsPanel::makeSchedulePage() {
     m_saveBtn->setCursor(Qt::PointingHandCursor);
     m_saveBtn->setStyleSheet(
         "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
-        "  border-radius: 8px; font-size: 13px; padding: 7px 0; border: none; }"
+        "  border-radius: 8px; font-size: 14px; padding: 7px 0; border: none; }"
         "QPushButton:hover { background: " + Theme::PrimaryDark + "; }");
     connect(m_saveBtn, &QPushButton::clicked, this, &SettingsPanel::onSave);
     apiLayout->addWidget(m_saveBtn, 0, Qt::AlignLeft);
@@ -407,7 +407,7 @@ QWidget *SettingsPanel::makeSchedulePage() {
 
     m_reminderCheck = new QCheckBox("启用日程提醒");
     m_reminderCheck->setChecked(AppConfig::instance().reminderEnabled());
-    m_reminderCheck->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
+    m_reminderCheck->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextSecondary) + ";");
     connect(m_reminderCheck, &QCheckBox::toggled, this, [](bool checked) {
         AppConfig::instance().setReminderEnabled(checked);
         AppConfig::instance().save();

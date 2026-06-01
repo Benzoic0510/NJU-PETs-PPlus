@@ -208,7 +208,7 @@ void ScheduleEditPanel::setupUi() {
     m_nlpEdit->setFixedHeight(30);
     m_nlpEdit->setStyleSheet(
         "QLineEdit { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 6px; padding: 0 8px; font-size: 12px; background: " + QString(Theme::BgPrimary) + "; }"
+        "  border-radius: 6px; padding: 0 8px; font-size: 13px; background: " + QString(Theme::BgPrimary) + "; }"
         "QLineEdit:focus { border-color: " + Theme::Primary + "; }");
 
     m_parseBtn = new QPushButton("解析");
@@ -216,7 +216,7 @@ void ScheduleEditPanel::setupUi() {
     m_parseBtn->setCursor(Qt::PointingHandCursor);
     m_parseBtn->setStyleSheet(
         "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
-        "  border-radius: 6px; font-size: 12px; border: none; }"
+        "  border-radius: 6px; font-size: 13px; border: none; }"
         "QPushButton:hover { background: " + Theme::PrimaryDark + "; }"
         "QPushButton:disabled { opacity: 0.6; }");
     connect(m_parseBtn, &QPushButton::clicked,   this, &ScheduleEditPanel::onParse);
@@ -229,7 +229,7 @@ void ScheduleEditPanel::setupUi() {
     // 状态提示（错误/进度/成功）
     m_status = new QLabel;
     m_status->setWordWrap(true);
-    m_status->setStyleSheet("font-size: 11px; color: " + QString(Theme::TextTertiary) + ";");
+    m_status->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextTertiary) + ";");
     m_status->hide();
     outer->addWidget(m_status);
 
@@ -243,15 +243,15 @@ void ScheduleEditPanel::setupUi() {
     // ── 表单 ──────────────────────────────────────────────────
     const QString editSS =
         "QLineEdit { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 5px; padding: 2px 7px; font-size: 12px; }"
+        "  border-radius: 5px; padding: 2px 7px; font-size: 13px; }"
         "QLineEdit:focus { border-color: " + Theme::Primary + "; }";
     const QString dtSS =
         "QDateTimeEdit { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 5px; padding: 2px 6px; font-size: 12px;"
+        "  border-radius: 5px; padding: 2px 6px; font-size: 13px;"
         "  background: " + Theme::BgPrimary + "; color: " + Theme::TextPrimary + "; }"
         "QDateTimeEdit:focus { border-color: " + Theme::Primary + "; }";
     const QString labelSS =
-        "font-size: 12px; color: " + QString(Theme::TextSecondary) + ";";
+        "font-size: 13px; color: " + QString(Theme::TextSecondary) + ";";
 
     auto makeCalendar = []() {
         auto *cal = new ThemedCalendarWidget;
@@ -282,7 +282,7 @@ void ScheduleEditPanel::setupUi() {
             "  border-radius: 6px;"
             "  margin: 3px;"
             "  padding: 2px 8px;"
-            "  font-size: 12px;"
+            "  font-size: 13px;"
             "  font-weight: 600;"
             "}"
             "QCalendarWidget QToolButton:hover {"
@@ -304,7 +304,7 @@ void ScheduleEditPanel::setupUi() {
             "  selection-color: " + Theme::TextSecondary + ";"
             "  alternate-background-color: " + Theme::BgSecondary + ";"
             "  border: none;"
-            "  font-size: 12px;"
+            "  font-size: 13px;"
             "  padding-top: 8px;"
             "  outline: 0;"
             "}"
@@ -364,7 +364,7 @@ void ScheduleEditPanel::setupUi() {
                         title->setObjectName("custom_calendar_title");
                         title->setAlignment(Qt::AlignCenter);
                         title->setStyleSheet(
-                            "font-size: 12px;"
+                            "font-size: 13px;"
                             "font-weight: 600;"
                             "color: " + QString(Theme::BgPrimary) + ";"
                             "background: transparent;");
@@ -382,7 +382,7 @@ void ScheduleEditPanel::setupUi() {
 
     // DDL 复选框
     m_isDDLCheck = new QCheckBox("设为截止日期（DDL）");
-    m_isDDLCheck->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+    m_isDDLCheck->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
     connect(m_isDDLCheck, &QCheckBox::toggled, this, &ScheduleEditPanel::onDDLToggled);
     outer->addWidget(m_isDDLCheck);
 
@@ -425,7 +425,7 @@ void ScheduleEditPanel::setupUi() {
     m_remindBox = new QComboBox;
     m_remindBox->setStyleSheet(
         "QComboBox { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 5px; padding: 2px 6px; font-size: 12px; }");
+        "  border-radius: 5px; padding: 2px 6px; font-size: 13px; }");
     form->addRow(makeLabel("提醒"), m_remindBox);
     onDDLToggled(false);  // 初始化为普通日程选项
 
@@ -440,7 +440,7 @@ void ScheduleEditPanel::setupUi() {
     cancelBtn->setCursor(Qt::PointingHandCursor);
     cancelBtn->setStyleSheet(
         "QPushButton { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 6px; font-size: 12px; background: none;"
+        "  border-radius: 6px; font-size: 13px; background: none;"
         "  color: " + Theme::TextSecondary + "; }"
         "QPushButton:hover { background: " + Theme::BgSecondary + "; }");
     connect(cancelBtn, &QPushButton::clicked, this, [this]() {
@@ -453,7 +453,7 @@ void ScheduleEditPanel::setupUi() {
     m_confirmBtn->setCursor(Qt::PointingHandCursor);
     m_confirmBtn->setStyleSheet(
         "QPushButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
-        "  border-radius: 6px; font-size: 12px; border: none; padding: 0 12px; }"
+        "  border-radius: 6px; font-size: 13px; border: none; padding: 0 12px; }"
         "QPushButton:hover { background: " + Theme::PrimaryDark + "; }");
     connect(m_confirmBtn, &QPushButton::clicked, this, &ScheduleEditPanel::onConfirm);
 
@@ -552,7 +552,7 @@ void ScheduleEditPanel::fillForm(const Schedule &s) {
 void ScheduleEditPanel::setStatus(const QString &msg, bool isError) {
     m_status->setText(msg);
     m_status->setStyleSheet(
-        QString("font-size: 11px; color: %1;")
+        QString("font-size: 12px; color: %1;")
             .arg(isError ? "#D85A30" : Theme::TextTertiary));
     m_status->show();
     adjustSize();

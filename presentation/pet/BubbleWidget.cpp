@@ -23,7 +23,7 @@ BubbleWidget::BubbleWidget(QWidget *parent)
                 "border: 1.5px solid %1;"
                 "border-radius: 8px;"
                 "padding: 4px 8px;"
-                "font-size: 13px;"
+                "font-size: 14px;"
                 "background: " + QString(Theme::BgPrimary) + ";"
                 "}")
             .arg(Theme::Primary));
@@ -32,7 +32,7 @@ BubbleWidget::BubbleWidget(QWidget *parent)
 
     m_loading = new QLabel("解析中…", this);
     m_loading->setStyleSheet(
-        QString("QLabel { color: %1; font-size: 12px; background: transparent; }")
+        QString("QLabel { color: %1; font-size: 13px; background: transparent; }")
             .arg(Theme::TextTertiary));
     m_loading->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_loading->hide();
@@ -41,7 +41,7 @@ BubbleWidget::BubbleWidget(QWidget *parent)
     m_output->setWordWrap(true);
     m_output->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     m_output->setStyleSheet(
-        QString("QLabel { color: %1; font-size: 13px; background: transparent; }")
+        QString("QLabel { color: %1; font-size: 14px; background: transparent; }")
             .arg(Theme::TextPrimary));
     m_output->hide();
 

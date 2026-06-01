@@ -64,7 +64,7 @@ void CalendarPanel::setupUi(NLPService *nlp, bool embedContextPanel) {
     // "即将到来" 标题
     auto *upLabel = new QLabel("即将到来");
     upLabel->setStyleSheet(
-        "font-size: 11px; font-weight: 500; color: " + QString(Theme::TextTertiary) + ";"
+        "font-size: 12px; font-weight: 500; color: " + QString(Theme::TextTertiary) + ";"
         "letter-spacing: 0.04em;");
     leftLayout->addWidget(upLabel);
     leftLayout->addSpacing(8);
@@ -102,7 +102,7 @@ void CalendarPanel::setupUi(NLPService *nlp, bool embedContextPanel) {
 
     m_dateLabel = new QLabel;
     m_dateLabel->setStyleSheet(
-        "font-size: 15px; font-weight: 500; color: " + QString(Theme::TextPrimary) + ";"
+        "font-size: 16px; font-weight: 500; color: " + QString(Theme::TextPrimary) + ";"
         "border: none;");
     hLayout->addWidget(m_dateLabel);
     hLayout->addStretch();
@@ -111,7 +111,7 @@ void CalendarPanel::setupUi(NLPService *nlp, bool embedContextPanel) {
     auto *addBtn = new QPushButton("+ 新建");
     addBtn->setCursor(Qt::PointingHandCursor);
     addBtn->setStyleSheet(
-        "QPushButton { font-size: 13px; padding: 5px 14px; border-radius: 8px;"
+        "QPushButton { font-size: 14px; padding: 5px 14px; border-radius: 8px;"
         "  border: 1px solid " + QString(Theme::Border) + ";"
         "  background: none; color: " + Theme::TextSecondary + "; }"
         "QPushButton:hover { background: " + Theme::BgSecondary + "; }");
@@ -253,7 +253,7 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
     vl->setSpacing(4);
 
     auto *titleLbl = new QLabel("<b>" + s.title + "</b>", container);
-    titleLbl->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextPrimary) + ";");
+    titleLbl->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextPrimary) + ";");
     titleLbl->setWordWrap(true);
     vl->addWidget(titleLbl);
 
@@ -263,12 +263,12 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
             ? s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("HH:mm")
             : s.startTime.toString("MM月dd日 HH:mm") + " – " + s.endTime.toString("MM月dd日 HH:mm"));
     auto *timeLbl = new QLabel(timeText, container);
-    timeLbl->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+    timeLbl->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
     vl->addWidget(timeLbl);
 
     if (!s.location.isEmpty()) {
         auto *locLbl = new QLabel("📍 " + s.location, container);
-        locLbl->setStyleSheet("font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+        locLbl->setStyleSheet("font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
         vl->addWidget(locLbl);
     }
 
@@ -279,13 +279,13 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
 
     auto *deleteBtn = new QPushButton("删除", container);
     deleteBtn->setStyleSheet(
-        "QPushButton { font-size: 12px; padding: 4px 10px; border-radius: 6px;"
+        "QPushButton { font-size: 13px; padding: 4px 10px; border-radius: 6px;"
         "  border: 1px solid #D85A30; color: #D85A30; background: none; }"
         "QPushButton:hover { background: #FAECE7; }");
 
     auto *editBtn = new QPushButton("编辑", container);
     editBtn->setStyleSheet(
-        "QPushButton { font-size: 12px; padding: 4px 10px; border-radius: 6px;"
+        "QPushButton { font-size: 13px; padding: 4px 10px; border-radius: 6px;"
         "  border: 1px solid " + QString(Theme::Border) + ";"
         "  color: " + Theme::TextSecondary + "; background: none; }"
         "QPushButton:hover { background: " + Theme::BgSecondary + "; }");
@@ -377,7 +377,7 @@ void CalendarPanel::updateUpcoming() {
         // 标题
         auto *titleLbl = new QLabel(s.title, row);
         titleLbl->setStyleSheet(
-            "font-size: 12px; color: " + QString(Theme::TextSecondary) + ";");
+            "font-size: 13px; color: " + QString(Theme::TextSecondary) + ";");
         titleLbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         rl->addWidget(titleLbl, 1);
 
@@ -387,7 +387,7 @@ void CalendarPanel::updateUpcoming() {
             : s.startTime.toString("HH:mm");
         auto *timeLbl = new QLabel(timeStr, row);
         timeLbl->setStyleSheet(
-            "font-size: 11px; color: " + QString(s.isDDL ? Theme::EventCoralBar : Theme::TextTertiary) + ";");
+            "font-size: 12px; color: " + QString(s.isDDL ? Theme::EventCoralBar : Theme::TextTertiary) + ";");
         rl->addWidget(timeLbl);
 
         upLayout->addWidget(row);
@@ -404,7 +404,7 @@ void CalendarPanel::updateUpcoming() {
     if (count == 0) {
         auto *emptyLbl = new QLabel("暂无即将到来的日程", m_upcomingList);
         emptyLbl->setStyleSheet(
-            "font-size: 12px; color: " + QString(Theme::TextTertiary) + ";");
+            "font-size: 13px; color: " + QString(Theme::TextTertiary) + ";");
         upLayout->addWidget(emptyLbl);
     }
 }

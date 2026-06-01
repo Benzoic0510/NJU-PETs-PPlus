@@ -65,7 +65,7 @@ void PetSelector::setupUi() {
         nameLbl->setObjectName("petName");
         nameLbl->setAlignment(Qt::AlignCenter);
         nameLbl->setStyleSheet(
-            "font-size: 13px; font-weight: 700;"
+            "font-size: 14px; font-weight: 700;"
             "color: " + QString(Theme::TextPrimary) + ";");
         cl->addWidget(nameLbl);
 
@@ -118,7 +118,7 @@ void PetSelector::setupUi() {
     pendingText->setObjectName("pendingText");
     pendingText->setAlignment(Qt::AlignCenter);
     pendingText->setStyleSheet(
-        "font-size: 13px; font-weight: 700;"
+        "font-size: 14px; font-weight: 700;"
         "color: " + QString(Theme::TextSecondary) + ";");
     pendingLayout->addWidget(pendingText);
     pendingLayout->addStretch();
@@ -157,13 +157,13 @@ void PetSelector::markSelected(const QString &petId) {
             btn->setText("✓ 已选择");
             btn->setStyleSheet(
                 "#petSelectButton { background: " + QString(Theme::Primary) + "; color: " + Theme::BgPrimary + ";"
-                "  border: none; border-radius: 6px; font-size: 12px; }");
+                "  border: none; border-radius: 6px; font-size: 13px; }");
             btn->setEnabled(false);
         } else {
             btn->setText("选择");
             btn->setStyleSheet(
                 "#petSelectButton { background: " + QString(Theme::PrimaryBg) + "; color: " + Theme::PrimaryDark + ";"
-                "  border: none; border-radius: 6px; font-size: 12px; }"
+                "  border: none; border-radius: 6px; font-size: 13px; }"
                 "#petSelectButton:hover { background: " + QString(Theme::BorderSecondary) + "; }");
             btn->setEnabled(true);
         }

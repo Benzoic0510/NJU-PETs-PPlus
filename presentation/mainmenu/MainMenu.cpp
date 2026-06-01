@@ -4,6 +4,7 @@
 
 #include "presentation/mainmenu/MainMenu.h"
 #include "presentation/calendar/CalendarPanel.h"
+#include "presentation/other/OtherPanel.h"
 #include "presentation/selector/PetSelector.h"
 #include "presentation/settings/SettingsPanel.h"
 #include "presentation/common/Theme.h"
@@ -723,7 +724,7 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     appTitle->setFixedWidth(176);
     appTitle->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
     appTitle->setStyleSheet(
-        "font-size:16px; font-weight:700;"
+        "font-size: 17px; font-weight:700;"
         "color:" + QString(Theme::BgPrimary) + ";"
         "letter-spacing:0;"
     );
@@ -835,6 +836,9 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
             this,          &MainMenu::petSleepThresholdChanged);
     connect(settingsPanel, &SettingsPanel::petInteractionDisabledChanged,
             this,          &MainMenu::petInteractionDisabledChanged);
+    auto *otherPanel = new OtherPanel(svc);
+    otherPanel->setStyleSheet("background: transparent;");
+    m_otherPanel = otherPanel;
 
     auto *scheduleContextReveal = new ContextPopHost(calendarPanel->contextPanel());
     m_scheduleReveal = scheduleContextReveal;
@@ -842,12 +846,12 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     m_contextStack->addWidget(makePetContext());                 // 0 启动
     m_contextStack->addWidget(scheduleContextReveal);            // 1 日程
     m_contextStack->addWidget(makeSettingsContext(settingsPanel));// 2 设置
-    m_contextStack->addWidget(makeAboutContext());               // 3 其他
+    m_contextStack->addWidget(makeOtherContext(otherPanel));     // 3 其他
 
     m_stack->addWidget(selector);                                // 0 启动
     m_stack->addWidget(calendarPanel);                           // 1 日程
     m_stack->addWidget(settingsPanel);                           // 2 设置
-    m_stack->addWidget(makeAboutPage());                         // 3 其他
+    m_stack->addWidget(otherPanel);                              // 3 其他
 
     surfaceLayout->addWidget(m_stack);
     rightWrapLayout->addWidget(m_rightSurface);
@@ -875,7 +879,7 @@ QPushButton *MainMenu::makeContextBtn(const QString &text) {
         "  border:none; border-radius:8px;"
         "  background:transparent;"
         "  color:" + QString(Theme::TextSecondary) + ";"
-        "  font-size:13px;"
+        "  font-size: 14px;"
         "}"
         "QPushButton:hover {"
         "  background:" + QString(Theme::PrimaryBg) + ";"
@@ -956,86 +960,52 @@ QWidget *MainMenu::makePlaceholder(const QString &text) {
     lbl->setAlignment(Qt::AlignCenter);
     lbl->setStyleSheet(
         "color:" + QString(Theme::TextTertiary) + ";"
-        "font-size:18px;"
+        "font-size: 19px;"
     );
     auto *lay = new QVBoxLayout(w);
     lay->addWidget(lbl);
     return w;
 }
 
-QWidget *MainMenu::makeAboutContext() {
+QWidget *MainMenu::makeOtherContext(OtherPanel *otherPanel) {
     auto *page = new QWidget;
+    m_otherContext = page;
+    m_otherTagHosts.clear();
     auto *root = new QVBoxLayout(page);
     root->setContentsMargins(14, 22, 14, 18);
     root->setSpacing(4);
 
-    auto *title = new QLabel("关于");
-    title->setStyleSheet(
-        "font-size:11px; font-weight:500; letter-spacing:0.04em; text-transform:uppercase;"
-        "color:" + QString(Theme::TextTertiary) + "; padding:0 12px; border:none; background:transparent;");
-    root->addWidget(title);
+    auto *group = new QButtonGroup(page);
+    group->setExclusive(true);
+
+    const QStringList labels = {"版本信息", "数据管理", "帮助与反馈"};
+    for (int i = 0; i < labels.size(); ++i) {
+        auto *btn = makeContextBtn(labels[i]);
+        auto *host = new SettingsTagHost(btn, page);
+        m_otherTagHosts.append(host);
+        group->addButton(btn, i);
+        root->addWidget(host);
+        if (i == 0) btn->setChecked(true);
+    }
+
+    m_otherIndicator = new QWidget(page);
+    m_otherIndicator->setFixedSize(4, 20);
+    m_otherIndicator->setStyleSheet(
+        "background:" + QString(Theme::Primary) + ";"
+        "border-radius:2px;");
+    m_otherIndicator->raise();
+    m_otherIndicator->hide();
+
+    connect(group, &QButtonGroup::idClicked, this, [this, otherPanel](int id) {
+        const int targetIndex = qBound(0, id, m_otherTagHosts.size() - 1);
+        if (targetIndex == m_otherCurrentIndex)
+            return;
+
+        m_otherCurrentIndex = targetIndex;
+        otherPanel->setCategory(id);
+        moveOtherIndicator(m_otherCurrentIndex, true);
+    });
     root->addStretch();
-    return page;
-}
-
-QWidget *MainMenu::makeAboutPage() {
-    auto *page = new QWidget;
-    auto *root = new QVBoxLayout(page);
-    root->setContentsMargins(18, 18, 18, 18);
-    root->setSpacing(14);
-
-    auto makeCard = [](const QString &title, const QStringList &lines, const QString &colorAccent) {
-        auto *card = new QWidget;
-        card->setObjectName("aboutCard");
-        card->setStyleSheet(
-            "#aboutCard { background:" + QString(Theme::BgPrimary) + ";"
-            "  border: 1px solid " + Theme::Border + ";"
-            "  border-radius: 8px; }");
-
-        auto *lay = new QVBoxLayout(card);
-        lay->setContentsMargins(20, 16, 20, 16);
-        lay->setSpacing(8);
-
-        auto *titleLabel = new QLabel(title);
-        titleLabel->setStyleSheet(
-            "font-size:14px; font-weight:700; color:" + QString(Theme::TextPrimary) + ";"
-            "background:transparent; border:none;");
-        lay->addWidget(titleLabel);
-
-        for (const auto &line : lines) {
-            auto *lbl = new QLabel(line);
-            lbl->setWordWrap(true);
-            lbl->setStyleSheet(
-                "font-size:13px; color:" + QString(Theme::TextSecondary) + ";"
-                "line-height:1.6; background:transparent; border:none;");
-            lay->addWidget(lbl);
-        }
-        return card;
-    };
-
-    root->addWidget(makeCard("NJU-PETs++",
-        {"桌面宠物 × 日程管理，为日常学习生活增添一点陪伴感。",
-         "项目选题：《人机交互》课程设计，南京大学。"},
-        Theme::Primary));
-
-    root->addWidget(makeCard("交互设计",
-        {"• 自然语言交互 — 右键宠物，用日常语言创建日程，无需记忆语法",
-         "• 直接操纵 — 拖拽宠物移动，点击互动，符合直觉的操作方式",
-         "• 视觉反馈 — 宠物动画、页面转场、卡片动画，让每次操作都有回应",
-         "• 降低认知负荷 — 日历视图的视觉层级、事件颜色编码、迷你日历摘要"},
-        Theme::PrimaryMid));
-
-    root->addWidget(makeCard("技术栈",
-        {"C++17 · Qt 6 Widgets · SQLite · 通义千问 API（DashScope）· CMake"},
-        Theme::TextTertiary));
-
-    root->addStretch();
-
-    auto *footer = new QLabel("NJU-PETs++  v0.1  ·  南京大学 2026");
-    footer->setStyleSheet(
-        "font-size:12px; color:" + QString(Theme::TextTertiary) + "; border:none; background:transparent;");
-    root->addWidget(footer);
-
     return page;
 }
 
@@ -1095,6 +1065,16 @@ void MainMenu::switchPage(int id) {
         });
         return;
     }
+    if (m_currentPage == 3 && m_otherPanel) {
+        auto finishBranch = makeFinishBranch(2);
+        playContextExit(m_currentPage, [finishBranch]() { finishBranch(0); });
+        m_otherPanel->playGroupsExit([finishBranch]() { finishBranch(1); });
+        QTimer::singleShot(700, this, [finishBranch]() {
+            finishBranch(0);
+            finishBranch(1);
+        });
+        return;
+    }
 
     auto finishBranch = makeFinishBranch(1);
     playContextExit(m_currentPage, [finishBranch]() {
@@ -1123,6 +1103,10 @@ void MainMenu::completePageSwitch(int id, quint64 token) {
         prepareSettingsContextEnter();
     if (target == 2 && m_settingsPanel)
         m_settingsPanel->prepareGroupsEnter();
+    if (target == 3)
+        prepareOtherContextEnter();
+    if (target == 3 && m_otherPanel)
+        m_otherPanel->prepareGroupsEnter();
     prepareRightSurfaceEnter(target);
 
     m_stack->setCurrentIndex(target);
@@ -1131,9 +1115,13 @@ void MainMenu::completePageSwitch(int id, quint64 token) {
         prepareSettingsContextEnter();
     if (target == 2 && m_settingsPanel)
         m_settingsPanel->prepareGroupsEnter();
+    if (target == 3)
+        prepareOtherContextEnter();
+    if (target == 3 && m_otherPanel)
+        m_otherPanel->prepareGroupsEnter();
     updateRightSurfaceStyle(target);
 
-    static constexpr int ContextWidths[] = {260, 320, 120, 0};
+    static constexpr int ContextWidths[] = {260, 320, 120, 150};
     animateContextWidth(ContextWidths[target]);
     m_currentPage = target;
     if (m_navGrp) {
@@ -1148,6 +1136,12 @@ void MainMenu::completePageSwitch(int id, quint64 token) {
         QTimer::singleShot(40, m_settingsPanel, [this, token]() {
             if (token == m_switchToken && m_currentPage == 2 && m_settingsPanel)
                 m_settingsPanel->playGroupsEnter();
+        });
+    }
+    if (target == 3 && m_otherPanel) {
+        QTimer::singleShot(40, m_otherPanel, [this, token]() {
+            if (token == m_switchToken && m_currentPage == 3 && m_otherPanel)
+                m_otherPanel->playGroupsEnter();
         });
     }
     playRightSurfaceEnter(target, token);
@@ -1197,6 +1191,11 @@ void MainMenu::playContextEnter(int id, quint64 token) {
         QTimer::singleShot(40, this, [this, token]() {
             if (token == m_switchToken && m_contextStack && m_contextStack->currentIndex() == 2)
                 playSettingsContextEnter();
+        });
+    } else if (id == 3) {
+        QTimer::singleShot(40, this, [this, token]() {
+            if (token == m_switchToken && m_contextStack && m_contextStack->currentIndex() == 3)
+                playOtherContextEnter();
         });
     }
 }
@@ -1347,6 +1346,154 @@ void MainMenu::moveSettingsIndicator(int index, bool animated) {
         m_settingsIndicatorAnim = nullptr;
     });
     m_settingsIndicatorAnim->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void MainMenu::prepareOtherContextEnter() {
+    for (QWidget *host : m_otherTagHosts) {
+        if (auto *tagHost = static_cast<SettingsTagHost *>(host))
+            tagHost->prepareEnter();
+    }
+
+    if (!m_otherContext || !m_otherIndicator || m_otherTagHosts.isEmpty())
+        return;
+
+    if (auto *layout = m_otherContext->layout())
+        layout->activate();
+
+    if (m_otherIndicatorAnim) {
+        m_otherIndicatorAnim->stop();
+        m_otherIndicatorAnim->deleteLater();
+        m_otherIndicatorAnim = nullptr;
+    }
+
+    const int currentIndex = qBound(0, m_otherCurrentIndex, m_otherTagHosts.size() - 1);
+    QWidget *host = m_otherTagHosts[currentIndex];
+    const QPoint hostPos = host->mapTo(m_otherContext, QPoint(0, 0));
+    const int targetX = hostPos.x();
+    const int targetY = hostPos.y() + (host->height() - m_otherIndicator->height()) / 2;
+
+    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(m_otherIndicator->graphicsEffect());
+    if (!effect) {
+        effect = new QGraphicsOpacityEffect(m_otherIndicator);
+        m_otherIndicator->setGraphicsEffect(effect);
+    }
+    effect->setOpacity(0.0);
+    m_otherIndicator->move(targetX + qRound(SettingsTagHost::startOffset()), targetY);
+    m_otherIndicator->show();
+    m_otherIndicator->raise();
+}
+
+void MainMenu::playOtherContextEnter() {
+    for (int i = 0; i < m_otherTagHosts.size(); ++i) {
+        if (auto *tagHost = static_cast<SettingsTagHost *>(m_otherTagHosts[i]))
+            tagHost->playEnter(SettingsTagHost::delayForIndex(i));
+    }
+
+    if (!m_otherContext || !m_otherIndicator || m_otherTagHosts.isEmpty())
+        return;
+
+    const int currentIndex = qBound(0, m_otherCurrentIndex, m_otherTagHosts.size() - 1);
+    QWidget *host = m_otherTagHosts[currentIndex];
+    const QPoint hostPos = host->mapTo(m_otherContext, QPoint(0, 0));
+    const int targetX = hostPos.x();
+    const int targetY = hostPos.y() + (host->height() - m_otherIndicator->height()) / 2;
+
+    auto *effect = qobject_cast<QGraphicsOpacityEffect *>(m_otherIndicator->graphicsEffect());
+    if (!effect) {
+        effect = new QGraphicsOpacityEffect(m_otherIndicator);
+        m_otherIndicator->setGraphicsEffect(effect);
+    }
+    effect->setOpacity(0.0);
+    m_otherIndicator->move(targetX + qRound(SettingsTagHost::startOffset()), targetY);
+    m_otherIndicator->show();
+    m_otherIndicator->raise();
+
+    if (m_otherIndicatorAnim) {
+        m_otherIndicatorAnim->stop();
+        m_otherIndicatorAnim->deleteLater();
+    }
+
+    QTimer::singleShot(SettingsTagHost::delayForIndex(currentIndex), m_otherIndicator,
+                       [this, effect, targetX, targetY, currentIndex]() {
+        if (m_currentPage != 3 || m_otherCurrentIndex != currentIndex || !m_otherIndicator)
+            return;
+
+        m_otherIndicatorAnim = new QVariantAnimation(this);
+        m_otherIndicatorAnim->setDuration(SettingsTagHost::animMs());
+        m_otherIndicatorAnim->setEasingCurve(QEasingCurve::Linear);
+        m_otherIndicatorAnim->setStartValue(0.0);
+        m_otherIndicatorAnim->setEndValue(1.0);
+        connect(m_otherIndicatorAnim, &QVariantAnimation::valueChanged, this,
+                [this, effect, targetX, targetY](const QVariant &value) {
+            const qreal t = qBound<qreal>(0.0, value.toReal(), 1.0);
+            effect->setOpacity(easeOutCubicValue(t));
+
+            qreal offset = 0.0;
+            const qreal forwardPart = SettingsTagHost::forwardPart();
+            if (t < forwardPart)
+                offset = interpolate(SettingsTagHost::startOffset(), SettingsTagHost::overshootOffset(),
+                                     easeOutCubicValue(t / forwardPart));
+            else
+                offset = interpolate(SettingsTagHost::overshootOffset(), 0.0,
+                                     easeOutCubicValue((t - forwardPart) / (1.0 - forwardPart)));
+
+            if (m_otherIndicator)
+                m_otherIndicator->move(targetX + qRound(offset), targetY);
+        });
+        connect(m_otherIndicatorAnim, &QVariantAnimation::finished, this, [this, effect, targetX, targetY]() {
+            effect->setOpacity(1.0);
+            if (m_otherIndicator) {
+                m_otherIndicator->move(targetX, targetY);
+                m_otherIndicator->raise();
+            }
+            m_otherIndicatorAnim = nullptr;
+        });
+        m_otherIndicatorAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    });
+}
+
+void MainMenu::moveOtherIndicator(int index, bool animated) {
+    if (!m_otherContext || !m_otherIndicator || index < 0 || index >= m_otherTagHosts.size())
+        return;
+
+    QWidget *host = m_otherTagHosts[index];
+    if (!host)
+        return;
+
+    const QPoint hostPos = host->mapTo(m_otherContext, QPoint(0, 0));
+    const int targetX = hostPos.x();
+    const int targetY = hostPos.y() + (host->height() - m_otherIndicator->height()) / 2;
+
+    m_otherIndicator->show();
+    m_otherIndicator->raise();
+
+    if (m_otherIndicatorAnim) {
+        m_otherIndicatorAnim->stop();
+        m_otherIndicatorAnim->deleteLater();
+        m_otherIndicatorAnim = nullptr;
+    }
+
+    if (!animated) {
+        m_otherIndicator->move(targetX, targetY);
+        return;
+    }
+
+    m_otherIndicatorAnim = new QVariantAnimation(this);
+    m_otherIndicatorAnim->setDuration(180);
+    m_otherIndicatorAnim->setEasingCurve(QEasingCurve::OutCubic);
+    m_otherIndicatorAnim->setStartValue(m_otherIndicator->pos().y());
+    m_otherIndicatorAnim->setEndValue(targetY);
+    m_otherIndicator->move(targetX, m_otherIndicator->y());
+    connect(m_otherIndicatorAnim, &QVariantAnimation::valueChanged, this, [this, targetX](const QVariant &value) {
+        if (m_otherIndicator)
+            m_otherIndicator->move(targetX, value.toInt());
+    });
+    connect(m_otherIndicatorAnim, &QVariantAnimation::finished, this, [this, targetX, targetY]() {
+        if (m_otherIndicator)
+            m_otherIndicator->move(targetX, targetY);
+        m_otherIndicatorAnim = nullptr;
+    });
+    m_otherIndicatorAnim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void MainMenu::animateContextWidth(int targetWidth) {
