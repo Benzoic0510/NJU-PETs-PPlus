@@ -966,10 +966,8 @@ void MainMenu::switchPage(int id) {
     if (!m_stack || !m_contextStack) return;
 
     const int target = qBound(0, id, 3);
-    if (target == m_currentPage)
-        return;
-
     if (m_pageSwitching) {
+        m_pendingPage = (target == m_currentPage) ? -1 : target;
         if (m_navGrp) {
             if (auto *button = m_navGrp->button(m_currentPage)) {
                 QSignalBlocker blocker(m_navGrp);
@@ -979,36 +977,61 @@ void MainMenu::switchPage(int id) {
         return;
     }
 
+    if (target == m_currentPage)
+        return;
+
+    m_pendingPage = -1;
     m_pageSwitching = true;
-    if (m_currentPage == 1 && m_calendarPanel) {
-        auto remaining = std::make_shared<int>(2);
-        auto finishOne = [this, target, remaining]() {
+    const quint64 token = ++m_switchToken;
+
+    auto makeFinishBranch = [this, target, token](int branchCount) {
+        auto remaining = std::make_shared<int>(branchCount);
+        auto completed = std::make_shared<QVector<bool>>(branchCount, false);
+        return [this, target, token, remaining, completed](int branch) {
+            if (token != m_switchToken || branch < 0 || branch >= completed->size() || completed->at(branch))
+                return;
+
+            (*completed)[branch] = true;
             --(*remaining);
             if (*remaining == 0)
-                completePageSwitch(target);
+                completePageSwitch(target, token);
         };
-        playContextExit(m_currentPage, finishOne);
-        m_calendarPanel->playTimelineExit(finishOne);
+    };
+
+    if (m_currentPage == 1 && m_calendarPanel) {
+        auto finishBranch = makeFinishBranch(2);
+        playContextExit(m_currentPage, [finishBranch]() { finishBranch(0); });
+        m_calendarPanel->playTimelineExit([finishBranch]() { finishBranch(1); });
+        QTimer::singleShot(700, this, [finishBranch]() {
+            finishBranch(0);
+            finishBranch(1);
+        });
         return;
     }
     if (m_currentPage == 2 && m_settingsPanel) {
-        auto remaining = std::make_shared<int>(2);
-        auto finishOne = [this, target, remaining]() {
-            --(*remaining);
-            if (*remaining == 0)
-                completePageSwitch(target);
-        };
-        playContextExit(m_currentPage, finishOne);
-        m_settingsPanel->playGroupsExit(finishOne);
+        auto finishBranch = makeFinishBranch(2);
+        playContextExit(m_currentPage, [finishBranch]() { finishBranch(0); });
+        m_settingsPanel->playGroupsExit([finishBranch]() { finishBranch(1); });
+        QTimer::singleShot(700, this, [finishBranch]() {
+            finishBranch(0);
+            finishBranch(1);
+        });
         return;
     }
 
-    playContextExit(m_currentPage, [this, target]() {
-        completePageSwitch(target);
+    auto finishBranch = makeFinishBranch(1);
+    playContextExit(m_currentPage, [finishBranch]() {
+        finishBranch(0);
+    });
+    QTimer::singleShot(700, this, [finishBranch]() {
+        finishBranch(0);
     });
 }
 
-void MainMenu::completePageSwitch(int id) {
+void MainMenu::completePageSwitch(int id, quint64 token) {
+    if (token != m_switchToken)
+        return;
+
     if (!m_stack || !m_contextStack) {
         m_pageSwitching = false;
         return;
@@ -1036,21 +1059,37 @@ void MainMenu::completePageSwitch(int id) {
     static constexpr int ContextWidths[] = {260, 320, 120, 0};
     animateContextWidth(ContextWidths[target]);
     m_currentPage = target;
-    playContextEnter(target);
+    if (m_navGrp) {
+        if (auto *button = m_navGrp->button(target)) {
+            QSignalBlocker blocker(m_navGrp);
+            button->setChecked(true);
+        }
+    }
+
+    playContextEnter(target, token);
     if (target == 2 && m_settingsPanel) {
-        QTimer::singleShot(40, m_settingsPanel, [this]() {
-            if (m_currentPage == 2 && m_settingsPanel)
+        QTimer::singleShot(40, m_settingsPanel, [this, token]() {
+            if (token == m_switchToken && m_currentPage == 2 && m_settingsPanel)
                 m_settingsPanel->playGroupsEnter();
         });
     }
-    playRightSurfaceEnter(target);
+    playRightSurfaceEnter(target, token);
     if (target == 1 && m_calendarPanel) {
-        QTimer::singleShot(40, m_calendarPanel, [this]() {
-            if (m_currentPage == 1 && m_calendarPanel)
+        QTimer::singleShot(40, m_calendarPanel, [this, token]() {
+            if (token == m_switchToken && m_currentPage == 1 && m_calendarPanel)
                 m_calendarPanel->playTimelineEnter();
         });
     }
     m_pageSwitching = false;
+
+    const int pending = m_pendingPage;
+    m_pendingPage = -1;
+    if (pending >= 0 && pending != m_currentPage) {
+        QTimer::singleShot(0, this, [this, pending, token]() {
+            if (token == m_switchToken && !m_pageSwitching)
+                switchPage(pending);
+        });
+    }
 }
 
 void MainMenu::playContextExit(int id, const std::function<void()> &finished) {
@@ -1068,18 +1107,18 @@ void MainMenu::playContextExit(int id, const std::function<void()> &finished) {
         finished();
 }
 
-void MainMenu::playContextEnter(int id) {
+void MainMenu::playContextEnter(int id, quint64 token) {
     if (id == 0) {
         if (auto *reveal = qobject_cast<PetRevealWidget *>(m_petReveal))
             reveal->playPop();
     } else if (id == 1 && m_scheduleReveal) {
-        QTimer::singleShot(40, m_scheduleReveal, [this]() {
-            if (m_contextStack && m_contextStack->currentIndex() == 1 && m_scheduleReveal)
+        QTimer::singleShot(40, m_scheduleReveal, [this, token]() {
+            if (token == m_switchToken && m_contextStack && m_contextStack->currentIndex() == 1 && m_scheduleReveal)
                 static_cast<ContextPopHost *>(m_scheduleReveal)->playPop();
         });
     } else if (id == 2) {
-        QTimer::singleShot(40, this, [this]() {
-            if (m_contextStack && m_contextStack->currentIndex() == 2)
+        QTimer::singleShot(40, this, [this, token]() {
+            if (token == m_switchToken && m_contextStack && m_contextStack->currentIndex() == 2)
                 playSettingsContextEnter();
         });
     }
@@ -1274,7 +1313,7 @@ void MainMenu::prepareRightSurfaceEnter(int id) {
     }
 }
 
-void MainMenu::playRightSurfaceEnter(int id) {
+void MainMenu::playRightSurfaceEnter(int id, quint64 token) {
     if (!m_rightSurface)
         return;
 
@@ -1284,8 +1323,8 @@ void MainMenu::playRightSurfaceEnter(int id) {
         return;
     }
 
-    QTimer::singleShot(40, m_rightSurface, [this]() {
-        if (m_currentPage != 1 || !m_rightSurface)
+    QTimer::singleShot(40, m_rightSurface, [this, token]() {
+        if (token != m_switchToken || m_currentPage != 1 || !m_rightSurface)
             return;
 
         const QWidget *wrap = m_rightSurface->parentWidget();
@@ -1318,8 +1357,8 @@ void MainMenu::playRightSurfaceEnter(int id) {
             if (m_rightSurface)
                 m_rightSurface->setFixedHeight(value.toInt());
         });
-        connect(m_rightSurfaceHeightAnim, &QVariantAnimation::finished, this, [this, targetHeight]() {
-            if (m_currentPage == 1 && m_rightSurface) {
+        connect(m_rightSurfaceHeightAnim, &QVariantAnimation::finished, this, [this, targetHeight, token]() {
+            if (token == m_switchToken && m_currentPage == 1 && m_rightSurface) {
                 m_rightSurface->setFixedHeight(targetHeight);
                 m_rightSurface->setMaximumHeight(QWIDGETSIZE_MAX);
                 m_rightSurface->setMinimumHeight(0);

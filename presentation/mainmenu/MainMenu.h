@@ -49,15 +49,15 @@ private:
     QWidget     *makePetContext();
     QWidget     *makeSettingsContext(class SettingsPanel *settingsPanel);
     void         switchPage(int id);
-    void         completePageSwitch(int id);
+    void         completePageSwitch(int id, quint64 token);
     void         playContextExit(int id, const std::function<void()> &finished);
-    void         playContextEnter(int id);
+    void         playContextEnter(int id, quint64 token);
     void         prepareSettingsContextEnter();
     void         playSettingsContextEnter();
     void         moveSettingsIndicator(int index, bool animated);
     void         animateContextWidth(int targetWidth);
     void         prepareRightSurfaceEnter(int id);
-    void         playRightSurfaceEnter(int id);
+    void         playRightSurfaceEnter(int id, quint64 token);
     void         setRightSurfaceTopAligned(bool aligned);
     void         updatePetContext(const QString &petId);
     void         updateRightSurfaceStyle(int pageId);
@@ -80,6 +80,8 @@ private:
     QVariantAnimation *m_settingsIndicatorAnim = nullptr;
     int             m_currentPage = 0;
     int             m_settingsCurrentIndex = 0;
+    int             m_pendingPage = -1;
+    quint64         m_switchToken = 0;
     bool            m_pageSwitching = false;
     bool            m_dragging = false;
     QPoint          m_dragStartGlobal;
