@@ -823,6 +823,9 @@ void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     auto *calendarPanel = new CalendarPanel(svc, nlp, nullptr, false);
     calendarPanel->setStyleSheet("background: transparent;");
     m_calendarPanel = calendarPanel;
+    connect(svc, &ScheduleService::scheduleAdded,   calendarPanel, &CalendarPanel::refresh);
+    connect(svc, &ScheduleService::scheduleUpdated, calendarPanel, &CalendarPanel::refresh);
+    connect(svc, &ScheduleService::scheduleRemoved, calendarPanel, &CalendarPanel::refresh);
     auto *settingsPanel = new SettingsPanel;
     settingsPanel->setStyleSheet("background: transparent;");
     m_settingsPanel = settingsPanel;
