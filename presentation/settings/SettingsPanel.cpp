@@ -16,6 +16,11 @@
 
 namespace {
 
+constexpr int DefaultPetScale = 100;
+constexpr int DefaultSleepThresholdMins = 5;
+constexpr bool DefaultInteractionDisabled = false;
+constexpr bool DefaultReminderEnabled = true;
+
 qreal clamp01(qreal value) {
     return qBound<qreal>(0.0, value, 1.0);
 }
@@ -239,14 +244,14 @@ QWidget *SettingsPanel::makeGroup(const QString &title) {
     return new SettingsGroupHost(group);
 }
 
-QWidget *SettingsPanel::makeSettingRow(const QString &label, QWidget *control) {
+QWidget *SettingsPanel::makeSettingRow(const QString &label, QWidget *control, QPushButton *resetButton) {
     auto *row = new QWidget;
     row->setObjectName("settingRow");
     row->setStyleSheet("#settingRow { background: transparent; border: none; }");
 
     auto *layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(16);
+    layout->setContentsMargins(0, 2, 0, 2);
+    layout->setSpacing(12);
 
     auto *labelWidget = new QLabel(label, row);
     labelWidget->setMinimumWidth(148);
@@ -254,9 +259,48 @@ QWidget *SettingsPanel::makeSettingRow(const QString &label, QWidget *control) {
         "font-size: 14px;"
         "color:" + QString(Theme::TextSecondary) + ";"
         "background: transparent; border: none;");
-    layout->addWidget(labelWidget);
-    layout->addWidget(control, 1);
+    layout->addWidget(labelWidget, 0, Qt::AlignVCenter);
+    layout->addWidget(control, 1, Qt::AlignVCenter);
+
+    if (resetButton) {
+        layout->addWidget(resetButton, 0, Qt::AlignRight | Qt::AlignVCenter);
+    } else {
+        auto *spacer = new QWidget(row);
+        spacer->setFixedSize(26, 26);
+        spacer->setVisible(false);
+        layout->addWidget(spacer, 0, Qt::AlignRight | Qt::AlignVCenter);
+    }
     return row;
+}
+
+QPushButton *SettingsPanel::makeResetButton() {
+    auto *button = new QPushButton(QString::fromUtf8("↻"));
+    button->setFixedSize(26, 26);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setToolTip("重置为默认值");
+    button->setStyleSheet(
+        "QPushButton {"
+        "  background: transparent;"
+        "  border: 1px solid " + QString(Theme::Border) + ";"
+        "  border-radius: 13px;"
+        "  color: " + QString(Theme::TextTertiary) + ";"
+        "  font-size: 14px;"
+        "  font-weight: 700;"
+        "  padding: 0;"
+        "}"
+        "QPushButton:hover {"
+        "  background: " + QString(Theme::PrimaryBg) + ";"
+        "  border-color: " + Theme::PrimaryMid + ";"
+        "  color: " + Theme::PrimaryDark + ";"
+        "}"
+        "QPushButton:disabled {"
+        "  background: transparent;"
+        "  border-color: transparent;"
+        "  color: transparent;"
+        "}");
+    button->setEnabled(false);
+    return button;
 }
 
 QWidget *SettingsPanel::makePetPage() {
@@ -287,12 +331,17 @@ QWidget *SettingsPanel::makePetPage() {
         m_petScaleLabel->setText(QString("%1%").arg(v));
         AppConfig::instance().setPetScale(v);
         AppConfig::instance().save();
+        updateResetButtons();
         emit petScaleChanged(v);
     });
 
     scaleRow->addWidget(m_petScaleSlider, 1);
     scaleRow->addWidget(m_petScaleLabel);
-    paramsLayout->addWidget(makeSettingRow("宠物大小", scaleWidget));
+    m_petScaleResetBtn = makeResetButton();
+    connect(m_petScaleResetBtn, &QPushButton::clicked, this, [this]() {
+        m_petScaleSlider->setValue(DefaultPetScale);
+    });
+    paramsLayout->addWidget(makeSettingRow("宠物大小", scaleWidget, m_petScaleResetBtn));
 
     auto *sleepWidget = new QWidget;
     auto *sleepRow = new QHBoxLayout(sleepWidget);
@@ -312,12 +361,17 @@ QWidget *SettingsPanel::makePetPage() {
         m_sleepThresholdLabel->setText(QString("%1 分钟").arg(v));
         AppConfig::instance().setPetSleepThresholdMins(v);
         AppConfig::instance().save();
+        updateResetButtons();
         emit petSleepThresholdChanged(v);
     });
 
     sleepRow->addWidget(m_sleepThresholdSlider, 1);
     sleepRow->addWidget(m_sleepThresholdLabel);
-    paramsLayout->addWidget(makeSettingRow("睡眠状态时间阈值", sleepWidget));
+    m_sleepThresholdResetBtn = makeResetButton();
+    connect(m_sleepThresholdResetBtn, &QPushButton::clicked, this, [this]() {
+        m_sleepThresholdSlider->setValue(DefaultSleepThresholdMins);
+    });
+    paramsLayout->addWidget(makeSettingRow("睡眠状态时间阈值", sleepWidget, m_sleepThresholdResetBtn));
 
     auto *interactionGroup = makeGroup("交互");
     m_petGroupHosts.append(interactionGroup);
@@ -329,13 +383,19 @@ QWidget *SettingsPanel::makePetPage() {
     connect(m_interactionDisabledCheck, &QCheckBox::toggled, this, [this](bool checked) {
         AppConfig::instance().setPetInteractionDisabled(checked);
         AppConfig::instance().save();
+        updateResetButtons();
         emit petInteractionDisabledChanged(checked);
     });
-    interactionLayout->addWidget(makeSettingRow("是否禁止交互", m_interactionDisabledCheck));
+    m_interactionResetBtn = makeResetButton();
+    connect(m_interactionResetBtn, &QPushButton::clicked, this, [this]() {
+        m_interactionDisabledCheck->setChecked(DefaultInteractionDisabled);
+    });
+    interactionLayout->addWidget(makeSettingRow("是否禁止交互", m_interactionDisabledCheck, m_interactionResetBtn));
 
     root->addWidget(paramsGroup);
     root->addWidget(interactionGroup);
     root->addStretch();
+    updateResetButtons();
     return page;
 }
 
@@ -408,15 +468,21 @@ QWidget *SettingsPanel::makeSchedulePage() {
     m_reminderCheck = new QCheckBox("启用日程提醒");
     m_reminderCheck->setChecked(AppConfig::instance().reminderEnabled());
     m_reminderCheck->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextSecondary) + ";");
-    connect(m_reminderCheck, &QCheckBox::toggled, this, [](bool checked) {
+    connect(m_reminderCheck, &QCheckBox::toggled, this, [this](bool checked) {
         AppConfig::instance().setReminderEnabled(checked);
         AppConfig::instance().save();
+        updateResetButtons();
     });
-    reminderLayout->addWidget(makeSettingRow("是否启用日程提醒", m_reminderCheck));
+    m_reminderResetBtn = makeResetButton();
+    connect(m_reminderResetBtn, &QPushButton::clicked, this, [this]() {
+        m_reminderCheck->setChecked(DefaultReminderEnabled);
+    });
+    reminderLayout->addWidget(makeSettingRow("是否启用日程提醒", m_reminderCheck, m_reminderResetBtn));
 
     root->addWidget(apiGroup);
     root->addWidget(reminderGroup);
     root->addStretch();
+    updateResetButtons();
     return page;
 }
 
@@ -481,11 +547,26 @@ void SettingsPanel::playGroupsExit(const std::function<void()> &finished) {
     });
 }
 
+void SettingsPanel::updateResetButtons() {
+    if (m_petScaleResetBtn && m_petScaleSlider)
+        m_petScaleResetBtn->setEnabled(m_petScaleSlider->value() != DefaultPetScale);
+
+    if (m_sleepThresholdResetBtn && m_sleepThresholdSlider)
+        m_sleepThresholdResetBtn->setEnabled(m_sleepThresholdSlider->value() != DefaultSleepThresholdMins);
+
+    if (m_interactionResetBtn && m_interactionDisabledCheck)
+        m_interactionResetBtn->setEnabled(m_interactionDisabledCheck->isChecked() != DefaultInteractionDisabled);
+
+    if (m_reminderResetBtn && m_reminderCheck)
+        m_reminderResetBtn->setEnabled(m_reminderCheck->isChecked() != DefaultReminderEnabled);
+}
+
 void SettingsPanel::onSave() {
     AppConfig &cfg = AppConfig::instance();
     if (qgetenv("DASHSCOPE_API_KEY").isEmpty())
         cfg.setApiKey(m_apiKeyEdit->text().trimmed());
     cfg.save();
+    updateResetButtons();
 
     m_saveBtn->setText("保存成功");
     m_saveBtn->setEnabled(false);

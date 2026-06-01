@@ -38,8 +38,10 @@ private:
     QWidget *makePetPage();
     QWidget *makeSchedulePage();
     QWidget *makeGroup(const QString &title);
-    QWidget *makeSettingRow(const QString &label, QWidget *control);
+    QWidget *makeSettingRow(const QString &label, QWidget *control, QPushButton *resetButton = nullptr);
+    QPushButton *makeResetButton();
     QVector<QWidget *> currentGroupHosts() const;
+    void updateResetButtons();
     void onSave();
 
     QStackedWidget *m_stack        = nullptr;
@@ -53,6 +55,10 @@ private:
     QLineEdit  *m_apiKeyEdit    = nullptr;
     QCheckBox  *m_reminderCheck = nullptr;
     QPushButton *m_saveBtn      = nullptr;
+    QPushButton *m_petScaleResetBtn = nullptr;
+    QPushButton *m_sleepThresholdResetBtn = nullptr;
+    QPushButton *m_interactionResetBtn = nullptr;
+    QPushButton *m_reminderResetBtn = nullptr;
 };
 
 #endif // SETTINGSPANEL_H
