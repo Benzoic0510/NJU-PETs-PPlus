@@ -118,7 +118,7 @@ void PetWidget::onSegmentFinished() {
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
     m_lastRightClick = center;
-    m_mainMenu.popup(center, {{"日程", "📅"}, {"动作", "🎭"}, {"面板", "🪟"}, {"退出", "✕"}});
+    m_mainMenu.popup(center, {{"日程", ":/icons/schedule.svg"}, {"动作", ":/icons/action.svg"}, {"面板", ":/icons/panel.svg"}, {"退出", ":/icons/quit.svg"}});
 }
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {

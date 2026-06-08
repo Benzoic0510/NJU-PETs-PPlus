@@ -15,6 +15,7 @@ find_package(Qt6 REQUIRED COMPONENTS
         Widgets     # QWidget、QPainter、QMenu 等
         Sql         # QSqlDatabase、QSqlQuery 等
         Network     # QNetworkAccessManager（NLPService）
+        Svg         # QSvgRenderer（RadialMenu SVG 图标）
 )
 
 # ========================
@@ -65,6 +66,7 @@ target_link_libraries(NJU-PETs++ PRIVATE
         Qt6::Widgets
         Qt6::Sql
         Qt6::Network
+        Qt6::Svg
 )
 
 # ========================

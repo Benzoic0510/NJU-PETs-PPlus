@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QSvgRenderer>
 #include <cmath>
 
 static constexpr double DEG2RAD = M_PI / 180.0;
@@ -114,18 +115,17 @@ void RadialMenu::drawSector(QPainter &p, int index) const {
 
     const QColor textColor = hov ? QColor(Theme::BgPrimary) : QColor(Theme::TextSecondary);
 
-    // 图标
+    // 图标（SVG）
     if (!m_items[index].icon.isEmpty()) {
-        p.setPen(textColor);
-        QFont iconFont("Segoe UI", 13);
-        p.setFont(iconFont);
-        const QRectF iconRect(lx - 18, ly - 20, 36, 22);
-        p.drawText(iconRect, Qt::AlignCenter, m_items[index].icon);
+        QSvgRenderer svgRenderer(m_items[index].icon);
+        const double iconSize = 24.0;
+        const QRectF iconRect(lx - iconSize / 2, ly - iconSize + 2, iconSize, iconSize);
+        svgRenderer.render(&p, iconRect);
 
         p.setPen(textColor);
         QFont labelFont("Segoe UI", 8);
         p.setFont(labelFont);
-        const QRectF labelRect(lx - 22, ly + 2, 44, 16);
+        const QRectF labelRect(lx - 22, ly + 8, 44, 16);
         p.drawText(labelRect, Qt::AlignCenter, m_items[index].label);
     } else {
         p.setPen(textColor);

@@ -14,7 +14,7 @@ class RadialMenu : public QWidget {
 public:
     struct Item {
         QString label;
-        QString icon;   // Unicode 符号，显示在标签上方
+        QString icon;   // SVG 资源路径，如 ":/icons/schedule.svg"
     };
 
     explicit RadialMenu(QWidget *parent = nullptr);
