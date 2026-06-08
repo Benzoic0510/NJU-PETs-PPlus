@@ -9,5 +9,8 @@
         <file>icons/action.svg</file>
         <file>icons/panel.svg</file>
         <file>icons/quit.svg</file>
+        <file>icons/idle.svg</file>
+        <file>icons/interact.svg</file>
+        <file>icons/sleep.svg</file>
     </qresource>
 </RCC>

@@ -123,7 +123,7 @@ void PetWidget::showMainMenu(QPoint /*globalPos*/) {
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_actionMenu.popup(center, {{"待机", "😴"}, {"互动", "✨"}, {"睡觉", "🌙"}});
+    m_actionMenu.popup(center, {{"待机", ":/icons/idle.svg"}, {"互动", ":/icons/interact.svg"}, {"睡觉", ":/icons/sleep.svg"}});
 }
 
 void PetWidget::paintEvent(QPaintEvent *) {
