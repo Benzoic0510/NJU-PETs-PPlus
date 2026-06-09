@@ -6,11 +6,14 @@
 #include "data/AppConfig.h"
 #include "presentation/common/Theme.h"
 
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QTimer>
+#include <QUrl>
 #include <QVariantAnimation>
 #include <QVBoxLayout>
 
@@ -218,6 +221,7 @@ void SettingsPanel::setupUi() {
     m_stack->setStyleSheet("background: transparent;");
     m_stack->addWidget(makePetPage());
     m_stack->addWidget(makeSchedulePage());
+    m_stack->addWidget(makeSoundPage());
     root->addWidget(m_stack, 1);
 }
 
@@ -500,9 +504,13 @@ void SettingsPanel::setCategory(int index) {
 }
 
 QVector<QWidget *> SettingsPanel::currentGroupHosts() const {
-    if (!m_stack || m_stack->currentIndex() == 0)
+    if (!m_stack)
+        return {};
+    if (m_stack->currentIndex() == 0)
         return m_petGroupHosts;
-    return m_scheduleGroupHosts;
+    if (m_stack->currentIndex() == 1)
+        return m_scheduleGroupHosts;
+    return m_soundGroupHosts;
 }
 
 void SettingsPanel::prepareGroupsEnter() {
@@ -574,4 +582,148 @@ void SettingsPanel::onSave() {
         m_saveBtn->setText("保存设置");
         m_saveBtn->setEnabled(true);
     });
+}
+
+// ═══════════════════════════════════════════════════════════
+// 音效页面
+// ═══════════════════════════════════════════════════════════
+
+QWidget *SettingsPanel::makeSoundPage() {
+    auto *page = new QWidget;
+    auto *root = new QVBoxLayout(page);
+    root->setContentsMargins(18, 18, 18, 18);
+    root->setSpacing(12);
+
+    auto *soundGroup = makeGroup("状态 / 操作音效");
+    m_soundGroupHosts.append(soundGroup);
+    auto *soundLayout = static_cast<SettingsGroupHost *>(soundGroup)->contentLayout();
+
+    auto *previewPlayer = new QMediaPlayer(page);
+    auto *previewAudio  = new QAudioOutput(page);
+    previewPlayer->setAudioOutput(previewAudio);
+
+    struct SoundEvent {
+        QString key;
+        QString label;
+    };
+    const QVector<SoundEvent> events = {
+        {"idle",       QString::fromUtf8("待机")},
+        {"greet",      QString::fromUtf8("互动")},
+        {"sleep",      QString::fromUtf8("入睡")},
+        {"wake",       QString::fromUtf8("醒来")},
+        {"click",      QString::fromUtf8("点击")},
+        {"drag_start", QString::fromUtf8("拖拽开始")},
+        {"drag_end",   QString::fromUtf8("拖拽结束")},
+    };
+
+    for (const auto &ev : events)
+        soundLayout->addWidget(makeSoundRow(ev.label, ev.key, previewPlayer));
+
+    root->addWidget(soundGroup);
+    root->addStretch();
+    return page;
+}
+
+QWidget *SettingsPanel::makeSoundRow(const QString &label, const QString &eventKey,
+                                     QMediaPlayer *previewPlayer) {
+    auto *row = new QWidget;
+    row->setObjectName("soundRow");
+    row->setStyleSheet("#soundRow { background: transparent; border: none; }");
+
+    auto *layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 4, 0, 4);
+    layout->setSpacing(8);
+
+    // 事件名称
+    auto *labelWidget = new QLabel(label, row);
+    labelWidget->setFixedWidth(72);
+    labelWidget->setStyleSheet(
+        "font-size: 14px; font-weight: 600;"
+        "color:" + QString(Theme::TextPrimary) + ";"
+        "background: transparent; border: none;");
+    layout->addWidget(labelWidget);
+
+    // 文件名
+    auto *fileLabel = new QLabel(row);
+    fileLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    fileLabel->setStyleSheet(
+        "font-size: 13px;"
+        "color:" + QString(Theme::TextTertiary) + ";"
+        "background: transparent; border: none;");
+
+    auto updateFileLabel = [fileLabel, eventKey]() {
+        const QString path = AppConfig::instance().soundForEvent(eventKey);
+        if (path.isEmpty()) {
+            fileLabel->setText(QString::fromUtf8("未设置"));
+        } else {
+            const QFileInfo fi(path);
+            fileLabel->setText(fi.exists() ? fi.fileName()
+                                           : QString::fromUtf8("(文件不存在)"));
+        }
+    };
+    updateFileLabel();
+    layout->addWidget(fileLabel, 1);
+
+    const QString btnStyle =
+        "QPushButton {"
+        "  background: transparent;"
+        "  border: 1px solid " + QString(Theme::Border) + ";"
+        "  border-radius: 6px;"
+        "  color: " + Theme::TextSecondary + ";"
+        "  font-size: 13px;"
+        "}"
+        "QPushButton:hover {"
+        "  background: " + Theme::PrimaryBg + ";"
+        "  border-color: " + Theme::PrimaryMid + ";"
+        "  color: " + Theme::PrimaryDark + ";"
+        "}";
+
+    // 导入
+    auto *importBtn = new QPushButton(QString::fromUtf8("导入"), row);
+    importBtn->setFixedSize(48, 28);
+    importBtn->setCursor(Qt::PointingHandCursor);
+    importBtn->setFocusPolicy(Qt::NoFocus);
+    importBtn->setStyleSheet(btnStyle);
+    connect(importBtn, &QPushButton::clicked, this, [this, eventKey, updateFileLabel]() {
+        const QString file = QFileDialog::getOpenFileName(
+            this, QString::fromUtf8("选择音效文件"), QString(),
+            QString::fromUtf8("音频文件 (*.mp3 *.wav *.ogg *.flac *.aac);;所有文件 (*)"));
+        if (!file.isEmpty()) {
+            AppConfig::instance().setSoundForEvent(eventKey, file);
+            AppConfig::instance().save();
+            updateFileLabel();
+        }
+    });
+    layout->addWidget(importBtn);
+
+    // 试听
+    auto *previewBtn = new QPushButton(QString::fromUtf8("试听"), row);
+    previewBtn->setFixedSize(48, 28);
+    previewBtn->setCursor(Qt::PointingHandCursor);
+    previewBtn->setFocusPolicy(Qt::NoFocus);
+    previewBtn->setStyleSheet(btnStyle);
+    connect(previewBtn, &QPushButton::clicked, this, [previewPlayer, eventKey]() {
+        const QString path = AppConfig::instance().soundForEvent(eventKey);
+        if (!path.isEmpty()) {
+            previewPlayer->stop();
+            previewPlayer->setSource(QUrl::fromLocalFile(path));
+            previewPlayer->play();
+        }
+    });
+    layout->addWidget(previewBtn);
+
+    // 清除
+    auto *clearBtn = new QPushButton(QString::fromUtf8("清除"), row);
+    clearBtn->setFixedSize(48, 28);
+    clearBtn->setCursor(Qt::PointingHandCursor);
+    clearBtn->setFocusPolicy(Qt::NoFocus);
+    clearBtn->setStyleSheet(btnStyle);
+    connect(clearBtn, &QPushButton::clicked, this, [this, eventKey, updateFileLabel]() {
+        AppConfig::instance().setSoundForEvent(eventKey, QString());
+        AppConfig::instance().save();
+        updateFileLabel();
+    });
+    layout->addWidget(clearBtn);
+
+    return row;
 }

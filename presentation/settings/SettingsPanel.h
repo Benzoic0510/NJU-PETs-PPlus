@@ -13,6 +13,8 @@
 #include <QStackedWidget>
 #include <QVector>
 #include <QWidget>
+#include <QMediaPlayer>
+#include <QAudioOutput>
 
 #include <functional>
 
@@ -37,8 +39,10 @@ private:
     void setupUi();
     QWidget *makePetPage();
     QWidget *makeSchedulePage();
+    QWidget *makeSoundPage();
     QWidget *makeGroup(const QString &title);
     QWidget *makeSettingRow(const QString &label, QWidget *control, QPushButton *resetButton = nullptr);
+    QWidget *makeSoundRow(const QString &label, const QString &eventKey, QMediaPlayer *previewPlayer);
     QPushButton *makeResetButton();
     QVector<QWidget *> currentGroupHosts() const;
     void updateResetButtons();
@@ -47,6 +51,7 @@ private:
     QStackedWidget *m_stack        = nullptr;
     QVector<QWidget *> m_petGroupHosts;
     QVector<QWidget *> m_scheduleGroupHosts;
+    QVector<QWidget *> m_soundGroupHosts;
     QSlider    *m_petScaleSlider   = nullptr;
     QLabel     *m_petScaleLabel    = nullptr;
     QSlider    *m_sleepThresholdSlider = nullptr;

@@ -9,6 +9,7 @@
 #include "business/PetStateManager.h"
 #include "business/ReminderService.h"
 #include "business/ScheduleService.h"
+#include "business/SoundEffectService.h"
 #include "presentation/mainmenu/MainMenu.h"
 #include "presentation/pet/BubbleWidget.h"
 #include "presentation/pet/PetWidget.h"
@@ -37,6 +38,7 @@ private:
     NLPService      m_nlpService;         // 桌宠气泡专用
     NLPService      m_calendarNlpService; // 日历面板专用（添加 + 修改）
     PetStateManager m_petStateManager;
+    SoundEffectService m_soundEffectService;
 
     MainMenu          *m_mainMenu     = nullptr;
     PetWidget         *m_petWidget    = nullptr;

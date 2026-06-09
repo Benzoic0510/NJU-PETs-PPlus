@@ -28,6 +28,7 @@ Application::~Application() {
 
 void Application::start() {
     AppConfig::instance().load();
+    m_soundEffectService.setMapping(AppConfig::instance().soundMapping());
 
     if (!DatabaseManager::instance().init()) {
         qWarning() << "数据库初始化失败";
@@ -57,6 +58,13 @@ void Application::start() {
     connect(&m_petStateManager, &PetStateManager::stateChanged, m_petWidget, &PetWidget::onStateChanged);
     connect(m_petWidget, &PetWidget::animationRequested, &m_petStateManager, &PetStateManager::onManualState);
     connect(m_petWidget, &PetWidget::sleepWokeUp,       &m_petStateManager, &PetStateManager::onSleepWokeUp);
+
+    // 绑定音效服务
+    connect(&m_petStateManager, &PetStateManager::stateChanged, &m_soundEffectService, &SoundEffectService::play);
+    connect(m_petWidget, &PetWidget::sleepWokeUp, this, [this]() { m_soundEffectService.play("wake"); });
+    connect(m_petWidget, &PetWidget::interacted,  this, [this]() { m_soundEffectService.play("click"); });
+    connect(m_petWidget, &PetWidget::dragStarted, this, [this]() { m_soundEffectService.play("drag_start"); });
+    connect(m_petWidget, &PetWidget::dragEnded,   this, [this]() { m_soundEffectService.play("drag_end"); });
 
     // BubbleWidget
     m_bubbleWidget = new BubbleWidget;

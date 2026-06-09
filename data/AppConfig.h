@@ -6,6 +6,7 @@
 #define APPCONFIG_H
 
 #include <QString>
+#include <QMap>
 
 class AppConfig {
 public:
@@ -32,6 +33,12 @@ public:
     QString apiKey() const;
     void setApiKey(const QString &key);
 
+    QMap<QString, QString> soundMapping() const;
+    void setSoundMapping(const QMap<QString, QString> &mapping);
+
+    QString soundForEvent(const QString &eventKey) const;
+    void setSoundForEvent(const QString &eventKey, const QString &filePath);
+
 private:
     AppConfig() = default;
     AppConfig(const AppConfig &) = delete;
@@ -45,8 +52,7 @@ private:
     bool m_petInteractionDisabled = false;
     bool m_reminderEnabled = true;
     QString m_apiKey;
+    QMap<QString, QString> m_soundMapping;
 };
 
 #endif //APPCONFIG_H
-
-

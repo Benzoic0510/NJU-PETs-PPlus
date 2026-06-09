@@ -33,6 +33,12 @@ void AppConfig::load() {
     m_petInteractionDisabled = obj.value("petInteractionDisabled").toBool(false);
     m_reminderEnabled  = obj.value("reminderEnabled").toBool(true);
     m_apiKey           = obj.value("apiKey").toString();
+
+    QJsonObject soundObj = obj.value("soundMapping").toObject();
+    m_soundMapping.clear();
+    for (auto it = soundObj.begin(); it != soundObj.end(); ++it) {
+        m_soundMapping.insert(it.key(), it.value().toString());
+    }
 }
 
 void AppConfig::save() {
@@ -43,6 +49,12 @@ void AppConfig::save() {
     obj["petInteractionDisabled"] = m_petInteractionDisabled;
     obj["reminderEnabled"]  = m_reminderEnabled;
     obj["apiKey"]           = m_apiKey;
+
+    QJsonObject soundObj;
+    for (auto it = m_soundMapping.begin(); it != m_soundMapping.end(); ++it) {
+        soundObj.insert(it.key(), it.value());
+    }
+    obj["soundMapping"] = soundObj;
 
     QFile f(configPath());
     if (f.open(QIODevice::WriteOnly)) {
@@ -69,3 +81,18 @@ void AppConfig::setReminderEnabled(bool on)     { m_reminderEnabled = on; }
 
 QString AppConfig::apiKey() const            { return m_apiKey; }
 void AppConfig::setApiKey(const QString &key) { m_apiKey = key; }
+
+QMap<QString, QString> AppConfig::soundMapping() const { return m_soundMapping; }
+void AppConfig::setSoundMapping(const QMap<QString, QString> &mapping) { m_soundMapping = mapping; }
+
+QString AppConfig::soundForEvent(const QString &eventKey) const {
+    return m_soundMapping.value(eventKey);
+}
+
+void AppConfig::setSoundForEvent(const QString &eventKey, const QString &filePath) {
+    if (filePath.isEmpty()) {
+        m_soundMapping.remove(eventKey);
+    } else {
+        m_soundMapping.insert(eventKey, filePath);
+    }
+}

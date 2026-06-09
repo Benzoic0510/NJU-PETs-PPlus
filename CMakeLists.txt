@@ -16,6 +16,7 @@ find_package(Qt6 REQUIRED COMPONENTS
         Sql         # QSqlDatabase、QSqlQuery 等
         Network     # QNetworkAccessManager（NLPService）
         Svg         # QSvgRenderer（RadialMenu SVG 图标）
+        Multimedia  # QMediaPlayer / QAudioOutput（SoundEffectService）
 )
 
 # ========================
@@ -67,6 +68,7 @@ target_link_libraries(NJU-PETs++ PRIVATE
         Qt6::Sql
         Qt6::Network
         Qt6::Svg
+        Qt6::Multimedia
 )
 
 # ========================
