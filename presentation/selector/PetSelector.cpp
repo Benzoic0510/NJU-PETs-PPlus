@@ -13,6 +13,7 @@
 
 const QVector<PetSelector::PetDef> PetSelector::PETS = {
     {"Muelsyse", "Muelsyse", ":/sprites/Muelsyse/Muelsyse.png"},
+    {"snow",     "snow",     ":/sprites/snow/snow.png"},
 };
 
 PetSelector::PetSelector(QWidget *parent)

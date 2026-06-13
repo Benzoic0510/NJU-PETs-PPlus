@@ -5,6 +5,10 @@
         <file>sprites/Muelsyse/sleep.png</file>
         <file>sprites/Muelsyse/pet.json</file>
         <file>sprites/Muelsyse/Muelsyse.png</file>
+        <file>sprites/snow/idle.png</file>
+        <file>sprites/snow/sleep.png</file>
+        <file>sprites/snow/pet.json</file>
+        <file>sprites/snow/snow.png</file>
         <file>icons/schedule.svg</file>
         <file>icons/action.svg</file>
         <file>icons/panel.svg</file>

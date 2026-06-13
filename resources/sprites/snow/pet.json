@@ -1,0 +1,14 @@
+{
+  "name": "snow",
+  "states": {
+    "idle":  { "rows": 24, "cols": 10 },
+    "sleep": {
+      "rows": 17, "cols": 10,
+      "segments": {
+        "falling": { "start": 0,   "end": 55 },
+        "looping": { "start": 56,  "end": 107 },
+        "waking":  { "start": 108, "end": 163 }
+      }
+    }
+  }
+}

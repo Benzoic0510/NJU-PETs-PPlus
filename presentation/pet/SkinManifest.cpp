@@ -15,6 +15,7 @@ SkinManifest &SkinManifest::instance() {
 
 SkinManifest::SkinManifest() {
     loadSkin("Muelsyse");
+    loadSkin("snow");
 }
 
 void SkinManifest::loadSkin(const QString &petId) {
