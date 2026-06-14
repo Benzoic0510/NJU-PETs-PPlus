@@ -19,7 +19,11 @@ void SoundEffectService::play(const QString &eventKey) {
     const QString path = m_mapping.value(eventKey);
     if (!path.isEmpty()) {
         m_player->stop();
-        m_player->setSource(QUrl::fromLocalFile(path));
+        if (path.startsWith(":/")) {
+            m_player->setSource(QUrl("qrc" + path));
+        } else {
+            m_player->setSource(QUrl::fromLocalFile(path));
+        }
         m_player->play();
     }
 }

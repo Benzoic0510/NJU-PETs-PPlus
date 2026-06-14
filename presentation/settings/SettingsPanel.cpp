@@ -613,11 +613,10 @@ QWidget *SettingsPanel::makeSoundPage() {
         QString label;
     };
     const QVector<SoundEvent> events = {
+        {"greet",      QString::fromUtf8("互动 / 点击")},
         {"idle",       QString::fromUtf8("待机")},
-        {"greet",      QString::fromUtf8("互动")},
         {"sleep",      QString::fromUtf8("入睡")},
         {"wake",       QString::fromUtf8("醒来")},
-        {"click",      QString::fromUtf8("点击")},
         {"drag_start", QString::fromUtf8("拖拽开始")},
         {"drag_end",   QString::fromUtf8("拖拽结束")},
     };

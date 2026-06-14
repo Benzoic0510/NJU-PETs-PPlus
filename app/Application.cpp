@@ -28,7 +28,14 @@ Application::~Application() {
 
 void Application::start() {
     AppConfig::instance().load();
-    m_soundEffectService.setMapping(AppConfig::instance().soundMapping());
+    // 互动 / 点击默认音效：用户未自定义时使用内置资源
+    {
+        auto mapping = AppConfig::instance().soundMapping();
+        if (!mapping.contains("greet") || mapping.value("greet").isEmpty()) {
+            mapping.insert("greet", ":/sounds/Muelsyse_greet.wav");
+        }
+        m_soundEffectService.setMapping(mapping);
+    }
 
     if (!DatabaseManager::instance().init()) {
         qWarning() << "数据库初始化失败";
@@ -62,7 +69,7 @@ void Application::start() {
     // 绑定音效服务
     connect(&m_petStateManager, &PetStateManager::stateChanged, &m_soundEffectService, &SoundEffectService::play);
     connect(m_petWidget, &PetWidget::sleepWokeUp, this, [this]() { m_soundEffectService.play("wake"); });
-    connect(m_petWidget, &PetWidget::interacted,  this, [this]() { m_soundEffectService.play("click"); });
+    // 互动/点击统一使用 greet 音效，由 stateChanged("greet") 触发，无需单独连接
     connect(m_petWidget, &PetWidget::dragStarted, this, [this]() { m_soundEffectService.play("drag_start"); });
     connect(m_petWidget, &PetWidget::dragEnded,   this, [this]() { m_soundEffectService.play("drag_end"); });
 
