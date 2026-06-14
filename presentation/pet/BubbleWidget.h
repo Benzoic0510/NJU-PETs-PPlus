@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QTimer>
+#include <QVector>
 #include <QWidget>
 
 class BubbleWidget : public QWidget {
@@ -22,6 +23,7 @@ public:
     bool isInChat() const { return m_inChat; }
     void showInput();
     void showResponse(const Schedule &s);
+    void showUpcoming(const QVector<Schedule> &schedules);
     void showError(const QString &msg);
     void showClarification(const QString &msg);
     void dismiss();
@@ -49,10 +51,10 @@ private:
     bool m_inChat    = false;
     int  m_dividerY  = -1;
 
-    static constexpr int BubbleW = 260;
-    static constexpr int TailH   = 12;
-    static constexpr int Pad     = 12;
-    static constexpr int CornerR = 12;
+    static constexpr int BubbleW = 300;
+    static constexpr int TailH   = 0;
+    static constexpr int Pad     = 14;
+    static constexpr int CornerR = 16;
 };
 
 #endif // BUBBLEWIDGET_H

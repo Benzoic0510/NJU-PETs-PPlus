@@ -20,7 +20,7 @@ PetWidget::PetWidget(QWidget *parent)
     setInteractionDisabled(AppConfig::instance().petInteractionDisabled());
 
     const QRect screen = QGuiApplication::primaryScreen()->availableGeometry();
-    move(screen.right() - 160, screen.bottom() - 160);
+    move(screen.right() - width() - 32, screen.bottom() - height() - 32);
 
     connect(&m_animator, &Animator::frameChanged, this, QOverload<>::of(&QWidget::update));
     connect(&m_animator, &Animator::segmentFinished, this, &PetWidget::onSegmentFinished);
@@ -32,16 +32,27 @@ PetWidget::PetWidget(QWidget *parent)
 
     // 主菜单：日程 / 动作 / 面板 / 退出
     connect(&m_mainMenu, &RadialMenu::triggered, this, [this](int idx) {
-        if      (idx == 0) emit nlpRequested();
+        if      (idx == 0) showScheduleMenu(m_lastRightClick);
         else if (idx == 1) showActionMenu(m_lastRightClick);
-        else if (idx == 2) emit showMainMenuRequested();
-        else if (idx == 3) emit quitRequested();
+        else if (idx == 2) emit quitRequested();
+        else if (idx == 3) emit showMainMenuRequested();
+    });
+
+    // 日程子菜单：添加 / 查看 / 返回 / 询问
+    connect(&m_scheduleMenu, &RadialMenu::triggered, this, [this](int idx) {
+        if      (idx == 0) emit nlpRequested();
+        else if (idx == 1) emit showSchedulePanelRequested();
+        else if (idx == 2) showMainMenu(m_lastRightClick);
+        else if (idx == 3) emit upcomingScheduleRequested();
     });
 
     // 动作子菜单
     connect(&m_actionMenu, &RadialMenu::triggered, this, [this](int idx) {
         const QStringList states{"idle", "greet", "sleep"};
-        if (idx < states.size()) emit animationRequested(states[idx]);
+        if      (idx == 0) emit animationRequested(states[0]);
+        else if (idx == 1) emit animationRequested(states[1]);
+        else if (idx == 2) showMainMenu(m_lastRightClick);
+        else if (idx == 3) emit animationRequested(states[2]);
     });
 }
 
@@ -55,7 +66,7 @@ void PetWidget::loadPet(const QString &petId) {
 
 void PetWidget::setPetScale(int scale) {
     m_petScale = qBound(60, scale, 180);
-    const int side = 128 * m_petScale / 100;
+    const int side = 144 * m_petScale / 100;
     setFixedSize(side, side);
     update();
 }
@@ -66,6 +77,7 @@ void PetWidget::setInteractionDisabled(bool disabled) {
         m_dragging = false;
         m_mainMenu.hide();
         m_actionMenu.hide();
+        m_scheduleMenu.hide();
     }
 }
 
@@ -118,12 +130,26 @@ void PetWidget::onSegmentFinished() {
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
     m_lastRightClick = center;
-    m_mainMenu.popup(center, {{"日程", ":/icons/schedule.svg"}, {"动作", ":/icons/action.svg"}, {"面板", ":/icons/panel.svg"}, {"退出", ":/icons/quit.svg"}});
+    m_mainMenu.popup(center, {{"日程", "▤"},
+                              {"动作", "✦"},
+                              {"退出", "×"},
+                              {"面板", "▦"}});
 }
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_actionMenu.popup(center, {{"待机", ":/icons/idle.svg"}, {"互动", ":/icons/interact.svg"}, {"睡觉", ":/icons/sleep.svg"}});
+    m_actionMenu.popup(center, {{"待机", "◌"},
+                                {"互动", "✧"},
+                                {"返回", "↶"},
+                                {"睡觉", "☽"}});
+}
+
+void PetWidget::showScheduleMenu(QPoint /*globalPos*/) {
+    const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
+    m_scheduleMenu.popup(center, {{"添加", "＋"},
+                                  {"日历", "⌕"},
+                                  {"返回", "↶"},
+                                  {"近程", "◷"}});
 }
 
 void PetWidget::paintEvent(QPaintEvent *) {

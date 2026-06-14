@@ -19,29 +19,35 @@ BubbleWidget::BubbleWidget(QWidget *parent)
     m_edit = new QLineEdit(this);
     m_edit->setPlaceholderText("说说你的日程…");
     m_edit->setStyleSheet(
-        QString("QLineEdit {"
-                "border: 1.5px solid %1;"
-                "border-radius: 8px;"
-                "padding: 4px 8px;"
-                "font-size: 14px;"
-                "background: " + QString(Theme::BgPrimary) + ";"
-                "}")
-            .arg(Theme::Primary));
+        "QLineEdit {"
+        "  border: 1px solid " + QString(Theme::Border) + ";"
+        "  border-radius: 10px;"
+        "  padding: 6px 10px;"
+        "  font-size: 13px;"
+        "  color: " + Theme::TextPrimary + ";"
+        "  background: " + Theme::BgSecondary + ";"
+        "  selection-background-color: " + Theme::PrimaryMid + ";"
+        "}"
+        "QLineEdit:focus {"
+        "  border-color: " + Theme::PrimaryMid + ";"
+        "  background: " + Theme::BgPrimary + ";"
+        "}");
     connect(m_edit, &QLineEdit::returnPressed, this, &BubbleWidget::submit);
     m_edit->hide();
 
     m_loading = new QLabel("解析中…", this);
     m_loading->setStyleSheet(
-        QString("QLabel { color: %1; font-size: 13px; background: transparent; }")
-            .arg(Theme::TextTertiary));
+        QString("QLabel { color: %1; font-size: 12px; background: transparent; }")
+            .arg(Theme::TextSecondary));
     m_loading->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_loading->hide();
 
     m_output = new QLabel(this);
     m_output->setWordWrap(true);
+    m_output->setTextFormat(Qt::PlainText);
     m_output->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     m_output->setStyleSheet(
-        QString("QLabel { color: %1; font-size: 14px; background: transparent; }")
+        QString("QLabel { color: %1; font-size: 13px; background: transparent; }")
             .arg(Theme::TextPrimary));
     m_output->hide();
 
@@ -83,6 +89,7 @@ void BubbleWidget::showResponse(const Schedule &s) {
     m_edit->clear();
     m_edit->hide();  // 日程已添加，关闭输入框
 
+    m_output->setTextFormat(Qt::PlainText);
     m_output->setText(
         s.isDDL
             ? QString("已添加 DDL：%1\n截止 %2")
@@ -97,10 +104,67 @@ void BubbleWidget::showResponse(const Schedule &s) {
     updateLayout();
 }
 
+void BubbleWidget::showUpcoming(const QVector<Schedule> &schedules) {
+    m_inChat = false;
+    m_hasOutput = true;
+    m_timer.stop();
+    m_loading->hide();
+    m_edit->hide();
+    m_output->setTextFormat(Qt::RichText);
+
+    if (schedules.isEmpty()) {
+        m_output->setText(
+            "<div style='font-size:13px; color:#1A1A2E;'>"
+            "<div style='font-weight:700; margin-bottom:6px;'>即将到来</div>"
+            "<div style='color:#8888AA; padding-top:4px;'>接下来暂时没有日程。</div>"
+            "</div>");
+    } else {
+        QString html =
+            "<div style='font-size:13px; color:#1A1A2E;'>"
+            "<div style='font-weight:700; margin-bottom:8px;'>即将到来</div>"
+            "<table cellspacing='0' cellpadding='0' width='100%'>";
+
+        for (const Schedule &s : schedules) {
+            const QString time = s.isDDL
+                ? QString("DDL %1").arg(s.startTime.toString("MM/dd HH:mm"))
+                : s.startTime.toString("MM/dd HH:mm");
+            QString meta = s.location.trimmed();
+            if (!s.isDDL && s.endTime.isValid())
+                meta = meta.isEmpty()
+                    ? QString("至 %1").arg(s.endTime.toString("HH:mm"))
+                    : QString("%1 · 至 %2").arg(meta, s.endTime.toString("HH:mm"));
+
+            html +=
+                "<tr>"
+                "<td style='width:74px; padding:7px 8px 7px 0; color:#534AB7; font-size:12px; white-space:nowrap; vertical-align:top;'>"
+                + time.toHtmlEscaped() +
+                "</td>"
+                "<td style='padding:6px 0 7px 0; vertical-align:top;'>"
+                "<div style='font-weight:600; color:#1A1A2E;'>"
+                + s.title.toHtmlEscaped() +
+                "</div>";
+            if (!meta.isEmpty()) {
+                html +=
+                    "<div style='font-size:12px; color:#8888AA; margin-top:2px;'>"
+                    + meta.toHtmlEscaped() +
+                    "</div>";
+            }
+            html += "</td></tr>";
+        }
+        html += "</table></div>";
+        m_output->setText(html);
+    }
+
+    m_output->show();
+    updateLayout();
+    show();
+}
+
 void BubbleWidget::showError(const QString &msg) {
     if (!m_inChat) return;
     // 非日程输入：显示提示，保留输入框（含上次文字）供重试
     m_loading->hide();
+    m_output->setTextFormat(Qt::PlainText);
     m_output->setText(msg);
     m_output->show();
     m_hasOutput = true;
@@ -114,6 +178,7 @@ void BubbleWidget::showClarification(const QString &msg) {
     if (!m_inChat) return;
     // AI 追问：显示问题，清空输入框供用户补充信息
     m_loading->hide();
+    m_output->setTextFormat(Qt::PlainText);
     m_output->setText(msg);
     m_output->show();
     m_hasOutput = true;
@@ -171,8 +236,8 @@ void BubbleWidget::updateLayout() {
 
     // 输入在下
     if (!m_edit->isHidden()) {
-        m_edit->setGeometry(Pad, y, contentW, 32);
-        y += 32 + Pad;
+        m_edit->setGeometry(Pad, y, contentW, 36);
+        y += 36 + Pad;
     }
 
     setFixedSize(BubbleW, y + TailH);
@@ -202,28 +267,22 @@ void BubbleWidget::paintEvent(QPaintEvent *) {
 
     const int bubbleH = height() - TailH;
 
-    // 气泡体 + 尾巴（WindingFill 取并集）
     QPainterPath path;
-    path.setFillRule(Qt::WindingFill);
     path.addRoundedRect(QRectF(0, 0, BubbleW, bubbleH), CornerR, CornerR);
 
-    const qreal cx = BubbleW / 2.0;
-    QPolygonF tail;
-    tail << QPointF(cx - 8, bubbleH - 2)
-         << QPointF(cx + 8, bubbleH - 2)
-         << QPointF(cx,     height());
-    path.addPolygon(tail);
-    path.closeSubpath();
-
     QColor bubbleBg(Theme::BgPrimary);
-    bubbleBg.setAlpha(245);
-    p.setPen(QPen(QColor(Theme::Border), 1.0));
+    bubbleBg.setAlpha(238);
+    QColor border(Theme::Border);
+    border.setAlpha(180);
+    p.setPen(QPen(border, 1.0));
     p.setBrush(bubbleBg);
     p.drawPath(path);
 
     // 输入框与输出之间的分隔线
     if (m_dividerY > 0) {
-        p.setPen(QPen(QColor(Theme::Border), 1));
+        QColor divider(Theme::Border);
+        divider.setAlpha(150);
+        p.setPen(QPen(divider, 1));
         p.drawLine(Pad, m_dividerY, BubbleW - Pad, m_dividerY);
     }
 }

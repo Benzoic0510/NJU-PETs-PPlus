@@ -4,6 +4,10 @@
 
 #include "business/ScheduleService.h"
 
+#include <QDateTime>
+
+#include <algorithm>
+
 ScheduleService::ScheduleService(QObject *parent)
     : QObject(parent)
 {
@@ -39,6 +43,25 @@ QVector<Schedule> ScheduleService::getAll() const {
 
 QVector<Schedule> ScheduleService::getByDateRange(const QDateTime &from, const QDateTime &to) const {
     return m_repo.getByDateRange(from, to);
+}
+
+QVector<Schedule> ScheduleService::getUpcoming(int limit) const {
+    QVector<Schedule> result;
+    if (limit <= 0) return result;
+
+    QVector<Schedule> all = m_repo.getAll();
+    const QDateTime now = QDateTime::currentDateTime();
+
+    std::sort(all.begin(), all.end(), [](const Schedule &a, const Schedule &b) {
+        return a.startTime < b.startTime;
+    });
+
+    for (const Schedule &s : all) {
+        if (s.startTime < now) continue;
+        result.append(s);
+        if (result.size() >= limit) break;
+    }
+    return result;
 }
 
 bool ScheduleService::hasConflict(const Schedule &s) const {

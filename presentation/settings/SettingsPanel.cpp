@@ -10,6 +10,7 @@
 #include <QFileInfo>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
+#include <QDebug>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QTimer>
@@ -600,7 +601,12 @@ QWidget *SettingsPanel::makeSoundPage() {
 
     auto *previewPlayer = new QMediaPlayer(page);
     auto *previewAudio  = new QAudioOutput(page);
+    previewAudio->setVolume(1.0);
     previewPlayer->setAudioOutput(previewAudio);
+    connect(previewPlayer, &QMediaPlayer::errorOccurred, page,
+            [](QMediaPlayer::Error, const QString &errorString) {
+                qWarning() << "Preview sound failed:" << errorString;
+            });
 
     struct SoundEvent {
         QString key;
@@ -704,11 +710,18 @@ QWidget *SettingsPanel::makeSoundRow(const QString &label, const QString &eventK
     previewBtn->setStyleSheet(btnStyle);
     connect(previewBtn, &QPushButton::clicked, this, [previewPlayer, eventKey]() {
         const QString path = AppConfig::instance().soundForEvent(eventKey);
-        if (!path.isEmpty()) {
-            previewPlayer->stop();
-            previewPlayer->setSource(QUrl::fromLocalFile(path));
-            previewPlayer->play();
+        if (path.isEmpty())
+            return;
+
+        const QFileInfo fi(path);
+        if (!fi.exists() || !fi.isFile()) {
+            qWarning() << "Preview sound file does not exist:" << path;
+            return;
         }
+
+        previewPlayer->stop();
+        previewPlayer->setSource(QUrl::fromLocalFile(fi.absoluteFilePath()));
+        previewPlayer->play();
     });
     layout->addWidget(previewBtn);
 

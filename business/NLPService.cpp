@@ -32,7 +32,12 @@ static const QString EDIT_PROMPT_TEMPLATE = QStringLiteral(
     "   {\"type\":\"schedule\",\"isDDL\":false,\"title\":\"...\",\"startTime\":\"YYYY-MM-DDTHH:mm:ss\","
     "\"endTime\":\"YYYY-MM-DDTHH:mm:ss\",\"location\":\"\",\"remindMins\":15}\n\n"
     "重要：用户未提及的字段，直接使用当前日程的原值，不要修改也不要追问。\n"
-    "时间计算以今天 %1 为基准。"
+    "时间计算以今天 %1 为基准。\n\n"
+    "时间严格性要求：\n"
+    "- 输出 schedule 前必须能确定完整日期、开始时间、结束时间。\n"
+    "- 用户只说 1点~11点、1:00~11:59 且未说明上午/下午/晚上/凌晨时，不要猜；除非当前日程原时间有相同 12 小时制小时并可直接保留上午/下午，否则返回 incomplete 追问“是上午还是下午”。\n"
+    "- “上午/早上”按 06:00-11:59，“中午”默认 12:00，“下午”按 12:00-17:59，“晚上/今晚”按 18:00-23:59，“凌晨”按 00:00-05:59。\n"
+    "- 用户只说日期但普通日程没有具体时刻时，返回 incomplete；DDL 可以只给日期，截止时间为当天 23:59:59。"
 );
 
 static const QString SYSTEM_PROMPT_TEMPLATE = QStringLiteral(
@@ -53,7 +58,13 @@ static const QString SYSTEM_PROMPT_TEMPLATE = QStringLiteral(
     "- isDDL 为 true 时：startTime 为截止日期当天 23:59:59，无需 endTime，remindMins 默认 1440（提前1天）\n"
     "- 普通日程缺少结束时间默认 +1 小时，无需追问\n"
     "- 缺少地点 location 填空字符串，无需追问\n"
-    "- 时间计算以今天 %1 为基准"
+    "- 时间计算以今天 %1 为基准\n\n"
+    "时间严格性要求：\n"
+    "- 输出 schedule 前必须能确定完整日期、开始时间、结束时间。\n"
+    "- 用户只说 1点~11点、1:00~11:59 且未说明上午/下午/晚上/凌晨时，不要猜上午或下午，必须返回 incomplete 追问“是上午还是下午”。例如“明天3点开会”必须追问；“明天下午3点开会”输出 15:00。\n"
+    "- “上午/早上”按 06:00-11:59，“中午”默认 12:00，“下午”按 12:00-17:59，“晚上/今晚”按 18:00-23:59，“凌晨”按 00:00-05:59。\n"
+    "- “12点”必须结合中午/晚上/凌晨判断；无法判断时返回 incomplete。\n"
+    "- 用户只说日期但普通日程没有具体时刻时，返回 incomplete；DDL 可以只给日期，截止时间为当天 23:59:59。"
 );
 
 NLPService::NLPService(QObject *parent)

@@ -14,7 +14,7 @@ class RadialMenu : public QWidget {
 public:
     struct Item {
         QString label;
-        QString icon;   // SVG 资源路径，如 ":/icons/schedule.svg"
+        QString icon;   // Text symbol drawn above the label.
     };
 
     explicit RadialMenu(QWidget *parent = nullptr);
@@ -38,10 +38,10 @@ private:
     QVector<Item> m_items;
     int m_hovered = -1;
 
-    static constexpr int    WidgetSize = 280;
-    static constexpr double InnerR     = 38.0;
-    static constexpr double OuterR     = 108.0;
-    static constexpr double GapDeg     = 4.0;   // 扇形间隙（度）
+    static constexpr int    WidgetSize = 320;
+    static constexpr double InnerR     = 68.0;
+    static constexpr double OuterR     = 126.0;
+    static constexpr double GapDeg     = 0.0;   // 扇形按钮之间不留角度间隙
 };
 
 #endif // RADIALMENU_H

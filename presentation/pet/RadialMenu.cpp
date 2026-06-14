@@ -8,7 +8,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QSvgRenderer>
 #include <cmath>
 
 static constexpr double DEG2RAD = M_PI / 180.0;
@@ -48,19 +47,18 @@ int RadialMenu::itemAt(QPoint pos) const {
 
     if (r < InnerR || r > OuterR) return -1;
 
-    // atan2 返回 [-π, π]，转换为从 -90° 起的顺时针角度
-    double angleDeg = std::atan2(dy, dx) * RAD2DEG;  // [-180, 180]
-    angleDeg += 90.0;                                  // 转为从 12 点钟起
-    if (angleDeg < 0) angleDeg += 360.0;              // [0, 360)
+    // atan2 返回 [-pi, pi]，转换为从 -90° 起的顺时针角度
+    double angleDeg = std::atan2(dy, dx) * RAD2DEG;
+    angleDeg += 90.0;
+    if (angleDeg < 0) angleDeg += 360.0;
 
     const int n        = m_items.size();
     const double step  = 360.0 / n;
     const double sweep = step - GapDeg;
 
     for (int i = 0; i < n; ++i) {
-        double start = i * step;   // 该扇形有效区起始（度，顺时针从12点）
+        double start = i * step;
         double end   = start + sweep;
-        // 规范化后比较
         if (angleDeg >= start && angleDeg < end) return i;
     }
     return -1;
@@ -74,28 +72,20 @@ void RadialMenu::drawSector(QPainter &p, int index) const {
     const double cy     = WidgetSize / 2.0;
     const bool   hov    = (index == m_hovered);
 
-    // Qt 的 arcTo 角度：正方向逆时针，0° 在 3 点钟
-    // 我们的起始角是从 12 点钟顺时针，需转换
-    const double qtStart = -((-90.0 + index * step + GapDeg / 2.0));  // 逆时针正向
-    const double qtSweep = -sweep;                                      // 顺时针为负
+    // Qt 的 arcTo 角度正方向为逆时针，0° 在 3 点钟。
+    const double qtStart = -((-90.0 + index * step + GapDeg / 2.0));
+    const double qtSweep = -sweep;
 
     QPainterPath path;
     const QRectF innerRect(cx - InnerR, cy - InnerR, InnerR * 2, InnerR * 2);
     const QRectF outerRect(cx - OuterR, cy - OuterR, OuterR * 2, OuterR * 2);
 
-    // 从内圆弧起点开始
-    const double startRad = (-90.0 + index * step + GapDeg / 2.0) * DEG2RAD;
+    const double startRad = sectorStartAngle(index);
     path.moveTo(cx + InnerR * std::cos(startRad), cy + InnerR * std::sin(startRad));
-
-    // 外圆弧（顺时针）
     path.arcTo(outerRect, qtStart, qtSweep);
-
-    // 内圆弧回来（逆时针，所以 sweep 取正）
     path.arcTo(innerRect, qtStart + qtSweep, -qtSweep);
-
     path.closeSubpath();
 
-    // 填充
     if (hov) {
         p.setBrush(QColor(Theme::Primary));
         p.setPen(Qt::NoPen);
@@ -103,24 +93,22 @@ void RadialMenu::drawSector(QPainter &p, int index) const {
         QColor sectorBg(Theme::BgPrimary);
         sectorBg.setAlpha(220);
         p.setBrush(sectorBg);
-        p.setPen(QPen(QColor(Theme::Border), 1.0));
+        p.setPen(Qt::NoPen);
     }
     p.drawPath(path);
 
-    // 标签位置：角平分线中点
     const double midAngleRad = startRad + (sweep / 2.0) * DEG2RAD;
     const double midR        = (InnerR + OuterR) / 2.0;
     const double lx          = cx + midR * std::cos(midAngleRad);
     const double ly          = cy + midR * std::sin(midAngleRad);
+    const QColor textColor   = hov ? QColor(Theme::BgPrimary) : QColor(Theme::TextSecondary);
 
-    const QColor textColor = hov ? QColor(Theme::BgPrimary) : QColor(Theme::TextSecondary);
-
-    // 图标（SVG）
     if (!m_items[index].icon.isEmpty()) {
-        QSvgRenderer svgRenderer(m_items[index].icon);
-        const double iconSize = 24.0;
-        const QRectF iconRect(lx - iconSize / 2, ly - iconSize + 2, iconSize, iconSize);
-        svgRenderer.render(&p, iconRect);
+        p.setPen(textColor);
+        QFont iconFont("Segoe UI Symbol", 15);
+        p.setFont(iconFont);
+        const QRectF iconRect(lx - 18, ly - 22, 36, 22);
+        p.drawText(iconRect, Qt::AlignCenter, m_items[index].icon);
 
         p.setPen(textColor);
         QFont labelFont("Segoe UI", 8);
@@ -144,14 +132,29 @@ void RadialMenu::paintEvent(QPaintEvent *) {
     for (int i = 0; i < m_items.size(); ++i)
         drawSector(p, i);
 
-    // 中心圆
     const double cx = WidgetSize / 2.0;
     const double cy = WidgetSize / 2.0;
-    QColor centerBg(Theme::BgPrimary);
-    centerBg.setAlpha(200);
-    p.setPen(QPen(QColor(Theme::Border), 1));
-    p.setBrush(centerBg);
-    p.drawEllipse(QPointF(cx, cy), InnerR - 4.0, InnerR - 4.0);
+
+    if (!m_items.isEmpty()) {
+        const double step = 360.0 / m_items.size();
+        QColor separator(0, 0, 0, 125);
+        QPen separatorPen(separator, 1.2);
+        separatorPen.setCapStyle(Qt::RoundCap);
+        p.setPen(separatorPen);
+        for (int i = 0; i < m_items.size(); ++i) {
+            const double a = (-90.0 + i * step) * DEG2RAD;
+            const QPointF inner(cx + (InnerR + 14.0) * std::cos(a), cy + (InnerR + 14.0) * std::sin(a));
+            const QPointF outer(cx + (OuterR - 14.0) * std::cos(a), cy + (OuterR - 14.0) * std::sin(a));
+            p.drawLine(inner, outer);
+        }
+    }
+
+    QColor outerBorder(Theme::Border);
+    outerBorder.setAlpha(210);
+    p.setBrush(Qt::NoBrush);
+    p.setPen(QPen(outerBorder, 1.0));
+    p.drawEllipse(QPointF(cx, cy), InnerR, InnerR);
+    p.drawEllipse(QPointF(cx, cy), OuterR, OuterR);
 }
 
 void RadialMenu::mouseMoveEvent(QMouseEvent *event) {
@@ -161,7 +164,11 @@ void RadialMenu::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void RadialMenu::mousePressEvent(QMouseEvent *event) {
-    if (event->button() != Qt::LeftButton) { hide(); return; }
+    if (event->button() != Qt::LeftButton) {
+        hide();
+        return;
+    }
+
     const int idx = itemAt(event->position().toPoint());
     hide();
     if (idx >= 0) emit triggered(idx);

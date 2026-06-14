@@ -15,7 +15,6 @@ find_package(Qt6 REQUIRED COMPONENTS
         Widgets     # QWidget、QPainter、QMenu 等
         Sql         # QSqlDatabase、QSqlQuery 等
         Network     # QNetworkAccessManager（NLPService）
-        Svg         # QSvgRenderer（RadialMenu SVG 图标）
         Multimedia  # QMediaPlayer / QAudioOutput（SoundEffectService）
 )
 
@@ -67,7 +66,6 @@ target_link_libraries(NJU-PETs++ PRIVATE
         Qt6::Widgets
         Qt6::Sql
         Qt6::Network
-        Qt6::Svg
         Qt6::Multimedia
 )
 
@@ -85,6 +83,15 @@ endif()
 if(WIN32)
     set_target_properties(NJU-PETs++ PROPERTIES
             WIN32_EXECUTABLE TRUE
+    )
+
+    add_custom_command(TARGET NJU-PETs++ POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory
+                    "$<TARGET_FILE_DIR:NJU-PETs++>/multimedia"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                    "${Qt6_DIR}/../../../plugins/multimedia"
+                    "$<TARGET_FILE_DIR:NJU-PETs++>/multimedia"
+            COMMENT "Deploying Qt multimedia plugins"
     )
 endif()
 

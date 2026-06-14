@@ -698,6 +698,13 @@ MainMenu::MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent)
     setupUi(svc, nlp);
 }
 
+void MainMenu::showSchedulePage() {
+    show();
+    raise();
+    activateWindow();
+    switchPage(1);
+}
+
 void MainMenu::setupUi(ScheduleService *svc, NLPService *nlp) {
     auto *root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);

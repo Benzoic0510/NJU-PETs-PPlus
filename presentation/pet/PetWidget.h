@@ -24,6 +24,8 @@ signals:
     void interacted();
     void nlpRequested();
     void animationRequested(const QString &state);
+    void showSchedulePanelRequested();
+    void upcomingScheduleRequested();
     void showMainMenuRequested();
     void quitRequested();
     void sleepWokeUp();
@@ -42,6 +44,7 @@ protected:
 private:
     void showMainMenu(QPoint globalPos);
     void showActionMenu(QPoint globalPos);
+    void showScheduleMenu(QPoint globalPos);
     void startSleepSequence();
     void onSegmentFinished();
 
@@ -50,6 +53,7 @@ private:
     Animator   m_animator;
     RadialMenu m_mainMenu;
     RadialMenu m_actionMenu;
+    RadialMenu m_scheduleMenu;
     QString    m_petId       = "Muelsyse";
     int        m_petScale    = 100;
     QPoint     m_dragStart;

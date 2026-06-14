@@ -78,6 +78,11 @@ void Application::start() {
     connect(m_bubbleWidget, &BubbleWidget::submitted,           &m_nlpService,  &NLPService::parse);
     connect(&m_nlpService,  &NLPService::parseFailed,           m_bubbleWidget, &BubbleWidget::showError);
     connect(&m_nlpService,  &NLPService::clarificationNeeded,   m_bubbleWidget, &BubbleWidget::showClarification);
+    connect(m_petWidget, &PetWidget::showSchedulePanelRequested,
+            m_mainMenu, &MainMenu::showSchedulePage);
+    connect(m_petWidget, &PetWidget::upcomingScheduleRequested, this, [this]() {
+        m_bubbleWidget->showUpcoming(m_scheduleService.getUpcoming());
+    });
     // 环形菜单：面板 / 退出
     connect(m_petWidget, &PetWidget::showMainMenuRequested, this, [this]() {
         m_mainMenu->show();
