@@ -1,13 +1,14 @@
 {
   "name": "snow",
   "states": {
-    "idle":  { "rows": 24, "cols": 10 },
+    "idle":  { "rows": 6, "cols": 20 },
+    "greet": { "rows": 12, "cols": 20 },
     "sleep": {
-      "rows": 17, "cols": 10,
+      "rows": 18, "cols": 20,
       "segments": {
-        "falling": { "start": 0,   "end": 55 },
-        "looping": { "start": 56,  "end": 107 },
-        "waking":  { "start": 108, "end": 163 }
+        "falling": { "start": 0,   "end": 119 },
+        "looping": { "start": 120, "end": 239 },
+        "waking":  { "start": 240, "end": 359 }
       }
     }
   }
