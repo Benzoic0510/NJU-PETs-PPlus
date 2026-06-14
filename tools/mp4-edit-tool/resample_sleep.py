@@ -1,4 +1,4 @@
-"""按新方案抽帧生成 snow 三状态精灵图：idle(sleep_2) / greet(wake_up+to_sleep) / sleep(wake_up+stay+to_sleep)"""
+"""按新方案抽帧生成 Pramanix 三状态精灵图：idle(sleep_2) / greet(wake_up+to_sleep) / sleep(wake_up+stay+to_sleep)"""
 import cv2
 import numpy as np
 import os
@@ -6,7 +6,7 @@ import shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SPRITE = os.path.join(ROOT, "output", "sprite")
-RESOURCES = os.path.join(ROOT, "..", "..", "resources", "sprites", "snow")
+RESOURCES = os.path.join(ROOT, "..", "..", "resources", "sprites", "Pramanix")
 CELL = 256          # 输出帧大小，与 Muelsyse 一致，避免 QPixmap 内存超限
 SRC_CELL = 512      # 源精灵图帧大小
 COLS = 20
@@ -97,7 +97,7 @@ for state, cfg in tasks.items():
     rows = rh // CELL
     cols = rw // CELL
 
-    out = os.path.join(SPRITE, f"{state}_snow.png")
+    out = os.path.join(SPRITE, f"{state}_Pramanix.png")
     cv2.imwrite(out, result)
     size_mb = os.path.getsize(out) / 1024 / 1024
     mem_mb = rw * rh * 4 / 1024 / 1024

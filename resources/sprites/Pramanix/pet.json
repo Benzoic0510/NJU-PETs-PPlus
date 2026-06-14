@@ -1,5 +1,5 @@
 {
-  "name": "snow",
+  "name": "Pramanix",
   "states": {
     "idle":  { "rows": 6, "cols": 20 },
     "greet": { "rows": 12, "cols": 20 },

@@ -5,17 +5,10 @@
         <file>sprites/Muelsyse/sleep.png</file>
         <file>sprites/Muelsyse/pet.json</file>
         <file>sprites/Muelsyse/Muelsyse.png</file>
-        <file>sprites/snow/idle.png</file>
-        <file>sprites/snow/greet.png</file>
-        <file>sprites/snow/sleep.png</file>
-        <file>sprites/snow/pet.json</file>
-        <file>sprites/snow/snow.png</file>
-        <file>icons/schedule.svg</file>
-        <file>icons/action.svg</file>
-        <file>icons/panel.svg</file>
-        <file>icons/quit.svg</file>
-        <file>icons/idle.svg</file>
-        <file>icons/interact.svg</file>
-        <file>icons/sleep.svg</file>
+        <file>sprites/Pramanix/idle.png</file>
+        <file>sprites/Pramanix/greet.png</file>
+        <file>sprites/Pramanix/sleep.png</file>
+        <file>sprites/Pramanix/pet.json</file>
+        <file>sprites/Pramanix/Pramanix.png</file>
     </qresource>
 </RCC>
