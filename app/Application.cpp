@@ -67,9 +67,13 @@ void Application::start() {
     connect(m_petWidget, &PetWidget::sleepWokeUp,       &m_petStateManager, &PetStateManager::onSleepWokeUp);
 
     // 绑定音效服务
-    connect(&m_petStateManager, &PetStateManager::stateChanged, &m_soundEffectService, &SoundEffectService::play);
+    // stateChanged 触发非交互类音效（greet 由用户 interacted 单独触发，避免空闲定时器自发互动出声）
+    connect(&m_petStateManager, &PetStateManager::stateChanged, this, [this](const QString &state) {
+        if (state != "greet" && state != "idle")
+            m_soundEffectService.play(state);
+    });
     connect(m_petWidget, &PetWidget::sleepWokeUp, this, [this]() { m_soundEffectService.play("wake"); });
-    // 互动/点击统一使用 greet 音效，由 stateChanged("greet") 触发，无需单独连接
+    connect(m_petWidget, &PetWidget::interacted,  this, [this]() { m_soundEffectService.play("greet"); });
     connect(m_petWidget, &PetWidget::dragStarted, this, [this]() { m_soundEffectService.play("drag_start"); });
     connect(m_petWidget, &PetWidget::dragEnded,   this, [this]() { m_soundEffectService.play("drag_end"); });
 
