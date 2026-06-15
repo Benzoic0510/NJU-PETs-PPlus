@@ -20,6 +20,9 @@ PetStateManager::PetStateManager(QObject *parent)
     m_sleepTimer.setInterval(AppConfig::instance().petSleepThresholdMins() * 60 * 1000);
     connect(&m_sleepTimer, &QTimer::timeout, this, &PetStateManager::onSleepTick);
 
+    m_cooldownTimer.setSingleShot(true);
+    connect(&m_cooldownTimer, &QTimer::timeout, this, [this]() { m_interactLocked = false; });
+
     setState("idle");
 }
 
@@ -39,8 +42,11 @@ void PetStateManager::onDragEnded() {
 }
 
 void PetStateManager::onInteract() {
+    if (m_interactLocked) return;
+    if (m_state == "sleep") return;
+    m_interactLocked = true;
+    m_cooldownTimer.stop();
     m_returnTimer.stop();
-    if (m_state == "sleep") return;  // PetWidget 自己处理唤醒流程
     resetSleepTimer();
     setState("greet");
     m_returnTimer.start(8000);
@@ -103,6 +109,8 @@ void PetStateManager::setState(const QString &state) {
         m_idleTimer.start();
         m_sleepTimer.start();
     }
+    if (state == "idle")
+        m_cooldownTimer.start(1000);
     emit stateChanged(m_state);
 }
 

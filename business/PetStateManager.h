@@ -17,6 +17,8 @@ public:
 
     QString currentState() const;
 
+    bool isInteractLocked() const { return m_interactLocked; }
+
 public slots:
     void onDragStarted();
     void onDragEnded();
@@ -43,6 +45,8 @@ private:
     QTimer  m_returnTimer;
     QTimer  m_idleTimer;
     QTimer  m_sleepTimer;
+    QTimer  m_cooldownTimer;
+    bool    m_interactLocked = false;
 };
 
 #endif //PETSTATEMANAGER_H

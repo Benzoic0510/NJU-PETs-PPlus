@@ -9,6 +9,7 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QMap>
+#include <QTimer>
 
 class SoundEffectService : public QObject {
     Q_OBJECT
@@ -22,7 +23,9 @@ public slots:
 private:
     QMediaPlayer *m_player = nullptr;
     QAudioOutput *m_audio = nullptr;
+    QTimer        m_clearTimer;
     QMap<QString, QString> m_mapping;
+    QString m_playingKey;
 };
 
 #endif // SOUNDEFFECTSERVICE_H
