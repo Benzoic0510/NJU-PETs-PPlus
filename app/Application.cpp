@@ -44,7 +44,14 @@ Application::~Application() {
 
 void Application::start() {
     AppConfig::instance().load();
-    m_soundEffectService.setMapping(AppConfig::instance().soundMapping());
+    // 互动 / 点击默认音效：用户未自定义时使用内置资源
+    {
+        auto mapping = AppConfig::instance().soundMapping();
+        if (!mapping.contains("greet") || mapping.value("greet").isEmpty()) {
+            mapping.insert("greet", ":/sounds/Muelsyse_greet.wav");
+        }
+        m_soundEffectService.setMapping(mapping);
+    }
 
     if (!DatabaseManager::instance().init()) {
         qWarning() << "数据库初始化失败";
@@ -80,9 +87,13 @@ void Application::start() {
     connect(m_petWidget, &PetWidget::sleepWokeUp,       &m_petStateManager, &PetStateManager::onSleepWokeUp);
 
     // 绑定音效服务
-    connect(&m_petStateManager, &PetStateManager::stateChanged, &m_soundEffectService, &SoundEffectService::play);
+    // stateChanged 触发非交互类音效（greet 由用户 interacted 单独触发，避免空闲定时器自发互动出声）
+    connect(&m_petStateManager, &PetStateManager::stateChanged, this, [this](const QString &state) {
+        if (state != "greet" && state != "idle")
+            m_soundEffectService.play(state);
+    });
     connect(m_petWidget, &PetWidget::sleepWokeUp, this, [this]() { m_soundEffectService.play("wake"); });
-    connect(m_petWidget, &PetWidget::interacted,  this, [this]() { m_soundEffectService.play("click"); });
+    connect(m_petWidget, &PetWidget::interacted,  this, [this]() { m_soundEffectService.play("greet"); });
     connect(m_petWidget, &PetWidget::dragStarted, this, [this]() { m_soundEffectService.play("drag_start"); });
     connect(m_petWidget, &PetWidget::dragEnded,   this, [this]() { m_soundEffectService.play("drag_end"); });
 

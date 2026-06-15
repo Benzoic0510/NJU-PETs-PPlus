@@ -12,5 +12,6 @@
         <file>sprites/Pramanix/pet.json</file>
         <file>sprites/Pramanix/Pramanix.png</file>
         <file>sprites/Pramanix/icon.png</file>
+        <file>sounds/Muelsyse_greet.wav</file>
     </qresource>
 </RCC>
