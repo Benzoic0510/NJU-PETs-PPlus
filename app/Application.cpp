@@ -91,7 +91,7 @@ void Application::start() {
     connect(m_petWidget, &PetWidget::sleepWokeUp, this, [this]() { m_soundEffectService.play("wake"); });
     connect(m_petWidget, &PetWidget::interacted,  this, [this]() {
         if (!m_petStateManager.isInteractLocked())
-            m_soundEffectService.play("greet");
+            QTimer::singleShot(1900, this, [this]() { m_soundEffectService.play("greet"); });
     });
     connect(m_petWidget, &PetWidget::dragStarted, this, [this]() { m_soundEffectService.play("drag_start"); });
     connect(m_petWidget, &PetWidget::dragEnded,   this, [this]() { m_soundEffectService.play("drag_end"); });
