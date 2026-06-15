@@ -48,14 +48,14 @@ private:
     void showQuitMenu(QPoint globalPos);
     void startSleepSequence();
     void onSegmentFinished();
+    void onMenuTriggered(int idx);
 
     enum SleepPhase { SleepNone, SleepFalling, SleepLooping, SleepWaking };
+    enum class MenuPage { Main, Schedule, Action, Quit };
 
     Animator   m_animator;
-    RadialMenu m_mainMenu;
-    RadialMenu m_actionMenu;
-    RadialMenu m_scheduleMenu;
-    RadialMenu m_quitMenu;
+    RadialMenu m_menu;
+    MenuPage   m_menuPage    = MenuPage::Main;
     QString    m_petId       = "Muelsyse";
     int        m_petScale    = 100;
     QPoint     m_dragStart;

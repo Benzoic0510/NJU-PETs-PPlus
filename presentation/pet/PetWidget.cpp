@@ -30,35 +30,7 @@ PetWidget::PetWidget(QWidget *parent)
         m_animator.load(m_petId, "idle", g.rows, g.cols);
     }
 
-    // 主菜单：日程 / 动作 / 面板 / 退出
-    connect(&m_mainMenu, &RadialMenu::triggered, this, [this](int idx) {
-        if      (idx == 0) showScheduleMenu(m_lastRightClick);
-        else if (idx == 1) showActionMenu(m_lastRightClick);
-        else if (idx == 2) showQuitMenu(m_lastRightClick);
-        else if (idx == 3) emit showMainMenuRequested();
-    });
-
-    // 日程子菜单：添加 / 查看 / 返回 / 询问
-    connect(&m_scheduleMenu, &RadialMenu::triggered, this, [this](int idx) {
-        if      (idx == 0) emit nlpRequested();
-        else if (idx == 1) emit showSchedulePanelRequested();
-        else if (idx == 2) showMainMenu(m_lastRightClick);
-        else if (idx == 3) emit upcomingScheduleRequested();
-    });
-
-    // 动作子菜单
-    connect(&m_actionMenu, &RadialMenu::triggered, this, [this](int idx) {
-        const QStringList states{"idle", "greet", "sleep"};
-        if      (idx == 0) emit animationRequested(states[0]);
-        else if (idx == 1) emit animationRequested(states[1]);
-        else if (idx == 2) showMainMenu(m_lastRightClick);
-        else if (idx == 3) emit animationRequested(states[2]);
-    });
-
-    // 退出确认菜单：左下取消，右下确认，上半圈占位不可点
-    connect(&m_quitMenu, &RadialMenu::triggered, this, [this](int idx) {
-        if (idx == 1) emit quitRequested();
-    });
+    connect(&m_menu, &RadialMenu::triggered, this, &PetWidget::onMenuTriggered);
 }
 
 void PetWidget::loadPet(const QString &petId) {
@@ -80,10 +52,7 @@ void PetWidget::setInteractionDisabled(bool disabled) {
     m_interactionDisabled = disabled;
     if (disabled) {
         m_dragging = false;
-        m_mainMenu.hide();
-        m_actionMenu.hide();
-        m_scheduleMenu.hide();
-        m_quitMenu.hide();
+        m_menu.hide();
     }
 }
 
@@ -136,34 +105,87 @@ void PetWidget::onSegmentFinished() {
 void PetWidget::showMainMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
     m_lastRightClick = center;
-    m_mainMenu.popup(center, {{"日程", "▤"},
-                              {"动作", "✦"},
-                              {"退出", "×"},
-                              {"面板", "▦"}});
+    m_menuPage = MenuPage::Main;
+    m_menu.popup(center, {{"日程", "▤"},
+                          {"动作", "✦"},
+                          {"退出", "×"},
+                          {"面板", "▦"}});
 }
 
 void PetWidget::showActionMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_actionMenu.popup(center, {{"待机", "◌"},
-                                {"互动", "✧"},
-                                {"返回", "↶"},
-                                {"睡觉", "☽"}});
+    m_menuPage = MenuPage::Action;
+    m_menu.popup(center, {{"待机", "◌"},
+                          {"互动", "✧"},
+                          {"返回", "↶"},
+                          {"睡觉", "☽"}});
 }
 
 void PetWidget::showScheduleMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_scheduleMenu.popup(center, {{"添加", "＋"},
-                                  {"日历", "⌕"},
-                                  {"返回", "↶"},
-                                  {"近程", "◷"}});
+    m_menuPage = MenuPage::Schedule;
+    m_menu.popup(center, {{"添加", "＋"},
+                          {"日历", "⌕"},
+                          {"返回", "↶"},
+                          {"近程", "◷"}});
 }
 
 void PetWidget::showQuitMenu(QPoint /*globalPos*/) {
     const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
-    m_quitMenu.popup(center, {{"", "", true, false},
-                              {"确认", "✓"},
-                              {"取消", "↶"},
-                              {"", "", true, false}});
+    m_menuPage = MenuPage::Quit;
+    m_menu.popup(center, {{"", "", true, false},
+                          {"确认", "✓"},
+                          {"取消", "↶"},
+                          {"", "", true, false}});
+}
+
+void PetWidget::onMenuTriggered(int idx) {
+    if (m_menuPage == MenuPage::Main) {
+        if      (idx == 0) showScheduleMenu(m_lastRightClick);
+        else if (idx == 1) showActionMenu(m_lastRightClick);
+        else if (idx == 2) showQuitMenu(m_lastRightClick);
+        else if (idx == 3) {
+            m_menu.hide();
+            emit showMainMenuRequested();
+        }
+        return;
+    }
+
+    if (m_menuPage == MenuPage::Schedule) {
+        if (idx == 2) {
+            showMainMenu(m_lastRightClick);
+            return;
+        }
+
+        m_menu.hide();
+        if      (idx == 0) emit nlpRequested();
+        else if (idx == 1) emit showSchedulePanelRequested();
+        else if (idx == 3) emit upcomingScheduleRequested();
+        return;
+    }
+
+    if (m_menuPage == MenuPage::Action) {
+        if (idx == 2) {
+            showMainMenu(m_lastRightClick);
+            return;
+        }
+
+        const QStringList states{"idle", "greet", "sleep"};
+        m_menu.hide();
+        if      (idx == 0) emit animationRequested(states[0]);
+        else if (idx == 1) emit animationRequested(states[1]);
+        else if (idx == 3) emit animationRequested(states[2]);
+        return;
+    }
+
+    if (m_menuPage == MenuPage::Quit) {
+        if (idx == 1) {
+            m_menu.hide();
+            emit quitRequested();
+        } else if (idx == 2) {
+            m_menu.hide();
+        }
+    }
 }
 
 void PetWidget::paintEvent(QPaintEvent *) {

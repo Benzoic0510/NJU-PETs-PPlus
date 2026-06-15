@@ -37,6 +37,7 @@ void RadialMenu::popup(const QPoint &globalPos, const QVector<Item> &items) {
     move(globalPos - QPoint(WidgetSize / 2, WidgetSize / 2));
     show();
     setFocus(Qt::PopupFocusReason);
+    update();
 }
 
 // 返回第 index 个扇形的起始角（弧度，从 -90° 开始顺时针）
@@ -205,9 +206,10 @@ void RadialMenu::keyPressEvent(QKeyEvent *event) {
         event->key() == Qt::Key_Space)
     {
         const int idx = m_hovered;
-        hide();
         if (idx >= 0)
             emit triggered(idx);
+        else
+            hide();
         return;
     }
 
@@ -239,8 +241,10 @@ void RadialMenu::mousePressEvent(QMouseEvent *event) {
     }
 
     const int idx = itemAt(event->position().toPoint());
-    hide();
-    if (idx >= 0) emit triggered(idx);
+    if (idx >= 0)
+        emit triggered(idx);
+    else
+        hide();
 }
 
 void RadialMenu::leaveEvent(QEvent *) {
