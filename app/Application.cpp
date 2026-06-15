@@ -8,8 +8,24 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QIcon>
 #include <QMenu>
 #include <QPixmap>
+
+namespace {
+
+QIcon iconForPet(const QString &petId) {
+    QPixmap source(QString(":/sprites/%1/icon.png").arg(petId));
+    if (source.isNull())
+        source = QPixmap(":/sprites/Muelsyse/icon.png");
+
+    QIcon icon;
+    for (int size : {16, 22, 24, 32, 48, 64, 128, 256})
+        icon.addPixmap(source.scaled(size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    return icon;
+}
+
+} // namespace
 
 Application &Application::instance() {
     static Application inst;
@@ -37,14 +53,18 @@ void Application::start() {
     connectSignals();
     m_reminderService.start();
 
+    const QString currentPetId = AppConfig::instance().petId();
+
     m_mainMenu = new MainMenu(&m_scheduleService, &m_calendarNlpService);
+    updateAppIcon(currentPetId);
     m_mainMenu->show();
 
     m_petWidget = new PetWidget;
-    m_petWidget->loadPet(AppConfig::instance().petId());
+    m_petWidget->loadPet(currentPetId);
     m_petWidget->show();
 
     connect(m_mainMenu, &MainMenu::petSelected, m_petWidget, &PetWidget::loadPet);
+    connect(m_mainMenu, &MainMenu::petSelected, this, &Application::updateAppIcon);
     connect(m_mainMenu, &MainMenu::petScaleChanged, m_petWidget, &PetWidget::setPetScale);
     connect(m_mainMenu, &MainMenu::petSleepThresholdChanged,
             &m_petStateManager, &PetStateManager::setSleepThresholdMins);
@@ -95,11 +115,7 @@ void Application::start() {
 }
 
 void Application::setupTrayIcon() {
-    const QPixmap sheet(":/sprites/Muelsyse/idle.png");
-    const QIcon icon(sheet.copy(0, 0, 128, 128).scaled(
-        22, 22, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
-    m_trayIcon = new QSystemTrayIcon(icon, this);
+    m_trayIcon = new QSystemTrayIcon(qApp->windowIcon(), this);
     m_trayIcon->setToolTip("NJU-PETs++");
 
     m_trayMenu    = new QMenu;
@@ -126,6 +142,16 @@ void Application::setupTrayIcon() {
             });
 
     m_trayIcon->show();
+}
+
+void Application::updateAppIcon(const QString &petId) {
+    const QIcon icon = iconForPet(petId);
+    qApp->setWindowIcon(icon);
+
+    if (m_mainMenu)
+        m_mainMenu->setWindowIcon(icon);
+    if (m_trayIcon)
+        m_trayIcon->setIcon(icon);
 }
 
 void Application::connectSignals() {

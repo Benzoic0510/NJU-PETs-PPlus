@@ -5,10 +5,12 @@
         <file>sprites/Muelsyse/sleep.png</file>
         <file>sprites/Muelsyse/pet.json</file>
         <file>sprites/Muelsyse/Muelsyse.png</file>
+        <file>sprites/Muelsyse/icon.png</file>
         <file>sprites/Pramanix/idle.png</file>
         <file>sprites/Pramanix/greet.png</file>
         <file>sprites/Pramanix/sleep.png</file>
         <file>sprites/Pramanix/pet.json</file>
         <file>sprites/Pramanix/Pramanix.png</file>
+        <file>sprites/Pramanix/icon.png</file>
     </qresource>
 </RCC>

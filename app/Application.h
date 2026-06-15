@@ -15,6 +15,7 @@
 #include "presentation/pet/PetWidget.h"
 
 #include <QObject>
+#include <QString>
 #include <QSystemTrayIcon>
 
 class Application : public QObject {
@@ -32,6 +33,7 @@ private:
 
     void connectSignals();
     void setupTrayIcon();
+    void updateAppIcon(const QString &petId);
 
     ScheduleService m_scheduleService;
     ReminderService m_reminderService;
