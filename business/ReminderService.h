@@ -20,6 +20,7 @@ public:
 
     void start(int intervalMs = 60000);
     void stop();
+    void forgetSchedule(int id);
 
 signals:
     void remind(const Schedule &s);

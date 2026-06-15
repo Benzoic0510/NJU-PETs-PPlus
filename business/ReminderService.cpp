@@ -21,6 +21,10 @@ void ReminderService::stop() {
     m_timer.stop();
 }
 
+void ReminderService::forgetSchedule(int id) {
+    m_notified.remove(id);
+}
+
 void ReminderService::scan() {
     if (!AppConfig::instance().reminderEnabled()) return;
     const QDateTime now = QDateTime::currentDateTime();

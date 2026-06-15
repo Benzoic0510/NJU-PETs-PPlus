@@ -12,6 +12,7 @@
 #include <QResizeEvent>
 #include <QScreen>
 #include <QSet>
+#include <QTimer>
 #include <QTime>
 #include <QVBoxLayout>
 
@@ -308,7 +309,28 @@ void CalendarPanel::onScheduleClicked(int id, QPoint globalPos) {
     popup->move(pos);
     popup->show();
 
-    QObject::connect(deleteBtn, &QPushButton::clicked, popup, [this, id, popup]() {
+    QObject::connect(deleteBtn, &QPushButton::clicked, popup, [this, id, popup, deleteBtn]() {
+        if (!deleteBtn->property("confirmingDelete").toBool()) {
+            deleteBtn->setProperty("confirmingDelete", true);
+            deleteBtn->setText("确认删除");
+            deleteBtn->setStyleSheet(
+                "QPushButton { font-size: 13px; padding: 4px 10px; border-radius: 6px;"
+                "  border: 1px solid #D85A30; color: #FFFFFF; background: #D85A30; }"
+                "QPushButton:hover { background: #B93838; }");
+
+            QTimer::singleShot(3000, popup, [deleteBtn]() {
+                if (!deleteBtn)
+                    return;
+                deleteBtn->setProperty("confirmingDelete", false);
+                deleteBtn->setText("删除");
+                deleteBtn->setStyleSheet(
+                    "QPushButton { font-size: 13px; padding: 4px 10px; border-radius: 6px;"
+                    "  border: 1px solid #D85A30; color: #D85A30; background: none; }"
+                    "QPushButton:hover { background: #FAECE7; }");
+            });
+            return;
+        }
+
         popup->close();
         m_svc->removeSchedule(id);
     });

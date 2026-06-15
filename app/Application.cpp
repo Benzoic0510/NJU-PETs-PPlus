@@ -166,6 +166,11 @@ void Application::updateAppIcon(const QString &petId) {
 }
 
 void Application::connectSignals() {
+    connect(&m_scheduleService, &ScheduleService::scheduleUpdated,
+            &m_reminderService, &ReminderService::forgetSchedule);
+    connect(&m_scheduleService, &ScheduleService::scheduleRemoved,
+            &m_reminderService, &ReminderService::forgetSchedule);
+
     // 提醒触发 → 宠物进入 interact 状态 + 系统通知
     connect(&m_reminderService, &ReminderService::remind,
             &m_petStateManager,  &PetStateManager::onRemind);
@@ -189,10 +194,20 @@ void Application::connectSignals() {
                 // 只有 BubbleWidget 正在对话时才负责添加；CalendarPanel 的编辑面板自己添加
                 if (!m_bubbleWidget || !m_bubbleWidget->isInChat()) return;
                 const int id = m_scheduleService.addSchedule(s);
-                if (id < 0)
-                    m_bubbleWidget->showError("该时间段与已有日程冲突，请换个时间。");
-                else
+                if (id < 0) {
+                    const Schedule conflict = m_scheduleService.conflictingSchedule(s);
+                    if (conflict.startTime.isValid()) {
+                        m_bubbleWidget->showError(
+                            QString("与「%1」冲突：%2 - %3，请换个时间。")
+                                .arg(conflict.title,
+                                     conflict.startTime.toString("MM月dd日 HH:mm"),
+                                     conflict.endTime.toString("HH:mm")));
+                    } else {
+                        m_bubbleWidget->showError("该时间段与已有日程冲突，请换个时间。");
+                    }
+                } else {
                     m_bubbleWidget->showResponse(s);
+                }
             });
 
     // PetWidget ↔ PetStateManager（m_petWidget 在 start() 里创建后再连）

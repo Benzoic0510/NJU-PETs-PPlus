@@ -103,11 +103,22 @@ void NLPService::parse(const QString &text) {
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     req.setRawHeader("Authorization", ("Bearer " + apiKey).toUtf8());
 
-    m_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    QNetworkReply *reply = m_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    m_pendingReplies.insert(reply);
 }
 
 void NLPService::clearHistory() {
     m_history = QJsonArray();
+}
+
+void NLPService::cancelPending() {
+    const auto replies = m_pendingReplies;
+    for (QNetworkReply *reply : replies) {
+        if (!reply)
+            continue;
+        m_cancelledReplies.insert(reply);
+        reply->abort();
+    }
 }
 
 void NLPService::parseEdit(const QString &text, const Schedule &current) {
@@ -145,11 +156,20 @@ void NLPService::parseEdit(const QString &text, const Schedule &current) {
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     req.setRawHeader("Authorization", ("Bearer " + apiKey).toUtf8());
 
-    m_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    QNetworkReply *reply = m_nam.post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    m_pendingReplies.insert(reply);
 }
 
 void NLPService::onReply(QNetworkReply *reply) {
+    const bool cancelled = m_cancelledReplies.remove(reply);
+    m_pendingReplies.remove(reply);
     reply->deleteLater();
+
+    if (cancelled) {
+        if (!m_history.isEmpty()) m_history.removeLast();
+        emit parseFailed("已取消解析");
+        return;
+    }
 
     if (reply->error() != QNetworkReply::NoError) {
         // 撤回刚才加入历史的用户消息，让用户可以重试

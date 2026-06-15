@@ -65,12 +65,17 @@ QVector<Schedule> ScheduleService::getUpcoming(int limit) const {
 }
 
 bool ScheduleService::hasConflict(const Schedule &s) const {
-    if (s.isDDL) return false;  // DDL 不占时间片，不参与冲突检测
+    return conflictingSchedule(s).startTime.isValid();
+}
+
+Schedule ScheduleService::conflictingSchedule(const Schedule &s) const {
+    Schedule conflict;
+    if (s.isDDL) return conflict;  // DDL 不占时间片，不参与冲突检测
     const auto existing = m_repo.getAll();
     for (const auto &e : existing) {
         if (e.id == s.id) continue;
         if (e.isDDL) continue;
-        if (e.startTime < s.endTime && e.endTime > s.startTime) return true;
+        if (e.startTime < s.endTime && e.endTime > s.startTime) return e;
     }
-    return false;
+    return conflict;
 }

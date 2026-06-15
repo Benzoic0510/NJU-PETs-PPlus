@@ -5,6 +5,7 @@
 #include "presentation/pet/RadialMenu.h"
 #include "presentation/common/Theme.h"
 
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -20,13 +21,22 @@ RadialMenu::RadialMenu(QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedSize(WidgetSize, WidgetSize);
     setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 void RadialMenu::popup(const QPoint &globalPos, const QVector<Item> &items) {
     m_items   = items;
     m_hovered = -1;
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items[i].visible && m_items[i].enabled) {
+            m_hovered = i;
+            break;
+        }
+    }
+
     move(globalPos - QPoint(WidgetSize / 2, WidgetSize / 2));
     show();
+    setFocus(Qt::PopupFocusReason);
 }
 
 // 返回第 index 个扇形的起始角（弧度，从 -90° 开始顺时针）
@@ -183,6 +193,43 @@ void RadialMenu::mouseMoveEvent(QMouseEvent *event) {
     const int prev = m_hovered;
     m_hovered = itemAt(event->position().toPoint());
     if (m_hovered != prev) update();
+}
+
+void RadialMenu::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_Escape) {
+        hide();
+        return;
+    }
+
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter ||
+        event->key() == Qt::Key_Space)
+    {
+        const int idx = m_hovered;
+        hide();
+        if (idx >= 0)
+            emit triggered(idx);
+        return;
+    }
+
+    if (event->key() == Qt::Key_Left || event->key() == Qt::Key_Up ||
+        event->key() == Qt::Key_Right || event->key() == Qt::Key_Down)
+    {
+        if (m_items.isEmpty())
+            return;
+
+        const int direction = (event->key() == Qt::Key_Left || event->key() == Qt::Key_Up) ? -1 : 1;
+        int index = m_hovered >= 0 ? m_hovered : 0;
+        for (int step = 0; step < m_items.size(); ++step) {
+            index = (index + direction + m_items.size()) % m_items.size();
+            if (m_items[index].visible && m_items[index].enabled) {
+                m_hovered = index;
+                update();
+                return;
+            }
+        }
+    }
+
+    QWidget::keyPressEvent(event);
 }
 
 void RadialMenu::mousePressEvent(QMouseEvent *event) {

@@ -368,8 +368,14 @@ TimelineView::TimelineView(QWidget *parent)
 {
     setFrameShape(QFrame::NoFrame);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setStyleSheet("QScrollArea { background: transparent; }");
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setStyleSheet(
+        "QScrollArea { background: transparent; }"
+        "QScrollBar:vertical { background: transparent; width: 8px; margin: 2px 0 2px 0; }"
+        "QScrollBar::handle:vertical { background: " + QString(Theme::Border) + "; border-radius: 4px; }"
+        "QScrollBar::handle:vertical:hover { background: " + QString(Theme::TextTertiary) + "; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }");
     viewport()->setStyleSheet("background: transparent;");
 
     m_canvas = new TimelineCanvas(this);

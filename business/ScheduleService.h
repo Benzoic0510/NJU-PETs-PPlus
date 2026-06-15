@@ -25,6 +25,7 @@ public:
     QVector<Schedule> getAll() const;
     QVector<Schedule> getByDateRange(const QDateTime &from, const QDateTime &to) const;
     QVector<Schedule> getUpcoming(int limit = 4) const;
+    Schedule          conflictingSchedule(const Schedule &s) const;
 
 signals:
     void scheduleAdded(int id);

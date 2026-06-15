@@ -22,7 +22,7 @@ namespace {
 
 constexpr int DefaultPetScale = 100;
 constexpr int DefaultSleepThresholdMins = 5;
-constexpr bool DefaultInteractionDisabled = false;
+constexpr bool DefaultInteractionAllowed = true;
 constexpr bool DefaultReminderEnabled = true;
 
 qreal clamp01(qreal value) {
@@ -382,20 +382,20 @@ QWidget *SettingsPanel::makePetPage() {
     m_petGroupHosts.append(interactionGroup);
     auto *interactionLayout = static_cast<SettingsGroupHost *>(interactionGroup)->contentLayout();
 
-    m_interactionDisabledCheck = new QCheckBox("禁止与宠物交互");
-    m_interactionDisabledCheck->setChecked(AppConfig::instance().petInteractionDisabled());
+    m_interactionDisabledCheck = new QCheckBox("允许与宠物交互");
+    m_interactionDisabledCheck->setChecked(!AppConfig::instance().petInteractionDisabled());
     m_interactionDisabledCheck->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextSecondary) + ";");
     connect(m_interactionDisabledCheck, &QCheckBox::toggled, this, [this](bool checked) {
-        AppConfig::instance().setPetInteractionDisabled(checked);
+        AppConfig::instance().setPetInteractionDisabled(!checked);
         AppConfig::instance().save();
         updateResetButtons();
-        emit petInteractionDisabledChanged(checked);
+        emit petInteractionDisabledChanged(!checked);
     });
     m_interactionResetBtn = makeResetButton();
     connect(m_interactionResetBtn, &QPushButton::clicked, this, [this]() {
-        m_interactionDisabledCheck->setChecked(DefaultInteractionDisabled);
+        m_interactionDisabledCheck->setChecked(DefaultInteractionAllowed);
     });
-    interactionLayout->addWidget(makeSettingRow("是否禁止交互", m_interactionDisabledCheck, m_interactionResetBtn));
+    interactionLayout->addWidget(makeSettingRow("宠物交互", m_interactionDisabledCheck, m_interactionResetBtn));
 
     root->addWidget(paramsGroup);
     root->addWidget(interactionGroup);
@@ -564,7 +564,7 @@ void SettingsPanel::updateResetButtons() {
         m_sleepThresholdResetBtn->setEnabled(m_sleepThresholdSlider->value() != DefaultSleepThresholdMins);
 
     if (m_interactionResetBtn && m_interactionDisabledCheck)
-        m_interactionResetBtn->setEnabled(m_interactionDisabledCheck->isChecked() != DefaultInteractionDisabled);
+        m_interactionResetBtn->setEnabled(m_interactionDisabledCheck->isChecked() != DefaultInteractionAllowed);
 
     if (m_reminderResetBtn && m_reminderCheck)
         m_reminderResetBtn->setEnabled(m_reminderCheck->isChecked() != DefaultReminderEnabled);

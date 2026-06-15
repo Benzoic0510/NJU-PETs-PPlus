@@ -46,6 +46,7 @@ private:
     void setupUi();
     void fillForm(const Schedule &s);
     void setStatus(const QString &msg, bool isError = false);
+    void setParsing(bool parsing);
 
     ScheduleService *m_svc;
     NLPService      *m_nlp;
@@ -54,6 +55,7 @@ private:
     QPushButton   *m_parseBtn   = nullptr;
     QPushButton   *m_confirmBtn = nullptr;
     QLabel        *m_status     = nullptr;
+    bool           m_parsing     = false;
     int            m_editingId      = -1;   // -1 = new, >=0 = editing
     Schedule       m_currentSchedule;       // valid only when m_editingId >= 0
 
