@@ -16,6 +16,23 @@ BubbleWidget::BubbleWidget(QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedWidth(BubbleW);
 
+    m_closeBtn = new QPushButton("×", this);
+    m_closeBtn->setCursor(Qt::PointingHandCursor);
+    m_closeBtn->setFocusPolicy(Qt::NoFocus);
+    m_closeBtn->setStyleSheet(
+        "QPushButton {"
+        "  border: none;"
+        "  background: transparent;"
+        "  color: " + QString(Theme::TextTertiary) + ";"
+        "  font-size: 16px;"
+        "  font-weight: 400;"
+        "  padding: 0;"
+        "}"
+        "QPushButton:hover {"
+        "  color: " + QString(Theme::TextSecondary) + ";"
+        "}");
+    connect(m_closeBtn, &QPushButton::clicked, this, &BubbleWidget::dismiss);
+
     m_edit = new QLineEdit(this);
     m_edit->setPlaceholderText("说说你的日程…");
     m_edit->setStyleSheet(
@@ -208,9 +225,12 @@ void BubbleWidget::submit() {
 }
 
 void BubbleWidget::updateLayout() {
-    const int contentW = BubbleW - 2 * Pad;
+    const int contentW = BubbleW - 2 * Pad - CloseBtnSize - 4;
     int y = Pad;
     m_dividerY = -1;
+
+    m_closeBtn->setGeometry(BubbleW - Pad - CloseBtnSize, Pad - 2, CloseBtnSize, CloseBtnSize);
+    m_closeBtn->raise();
 
     // 输出在上
     if (!m_output->isHidden()) {

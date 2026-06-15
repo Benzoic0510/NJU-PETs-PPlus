@@ -45,6 +45,7 @@ private:
     void showMainMenu(QPoint globalPos);
     void showActionMenu(QPoint globalPos);
     void showScheduleMenu(QPoint globalPos);
+    void showQuitMenu(QPoint globalPos);
     void startSleepSequence();
     void onSegmentFinished();
 
@@ -54,6 +55,7 @@ private:
     RadialMenu m_mainMenu;
     RadialMenu m_actionMenu;
     RadialMenu m_scheduleMenu;
+    RadialMenu m_quitMenu;
     QString    m_petId       = "Muelsyse";
     int        m_petScale    = 100;
     QPoint     m_dragStart;

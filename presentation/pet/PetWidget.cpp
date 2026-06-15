@@ -34,7 +34,7 @@ PetWidget::PetWidget(QWidget *parent)
     connect(&m_mainMenu, &RadialMenu::triggered, this, [this](int idx) {
         if      (idx == 0) showScheduleMenu(m_lastRightClick);
         else if (idx == 1) showActionMenu(m_lastRightClick);
-        else if (idx == 2) emit quitRequested();
+        else if (idx == 2) showQuitMenu(m_lastRightClick);
         else if (idx == 3) emit showMainMenuRequested();
     });
 
@@ -53,6 +53,11 @@ PetWidget::PetWidget(QWidget *parent)
         else if (idx == 1) emit animationRequested(states[1]);
         else if (idx == 2) showMainMenu(m_lastRightClick);
         else if (idx == 3) emit animationRequested(states[2]);
+    });
+
+    // 退出确认菜单：左下取消，右下确认，上半圈占位不可点
+    connect(&m_quitMenu, &RadialMenu::triggered, this, [this](int idx) {
+        if (idx == 1) emit quitRequested();
     });
 }
 
@@ -78,6 +83,7 @@ void PetWidget::setInteractionDisabled(bool disabled) {
         m_mainMenu.hide();
         m_actionMenu.hide();
         m_scheduleMenu.hide();
+        m_quitMenu.hide();
     }
 }
 
@@ -150,6 +156,14 @@ void PetWidget::showScheduleMenu(QPoint /*globalPos*/) {
                                   {"日历", "⌕"},
                                   {"返回", "↶"},
                                   {"近程", "◷"}});
+}
+
+void PetWidget::showQuitMenu(QPoint /*globalPos*/) {
+    const QPoint center = mapToGlobal(QPoint(width() / 2, height() / 2));
+    m_quitMenu.popup(center, {{"", "", true, false},
+                              {"确认", "✓"},
+                              {"取消", "↶"},
+                              {"", "", true, false}});
 }
 
 void PetWidget::paintEvent(QPaintEvent *) {

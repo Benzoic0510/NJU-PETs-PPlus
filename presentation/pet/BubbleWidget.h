@@ -9,6 +9,7 @@
 
 #include <QLabel>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QTimer>
 #include <QVector>
 #include <QWidget>
@@ -43,6 +44,7 @@ private:
 
     QWidget   *m_pet     = nullptr;
     QLineEdit *m_edit    = nullptr;
+    QPushButton *m_closeBtn = nullptr;
     QLabel    *m_loading = nullptr;
     QLabel    *m_output  = nullptr;
     QTimer     m_timer;
@@ -54,6 +56,7 @@ private:
     static constexpr int BubbleW = 300;
     static constexpr int TailH   = 0;
     static constexpr int Pad     = 14;
+    static constexpr int CloseBtnSize = 20;
     static constexpr int CornerR = 16;
 };
 

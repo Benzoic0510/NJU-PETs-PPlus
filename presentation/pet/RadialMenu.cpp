@@ -59,12 +59,24 @@ int RadialMenu::itemAt(QPoint pos) const {
     for (int i = 0; i < n; ++i) {
         double start = i * step;
         double end   = start + sweep;
-        if (angleDeg >= start && angleDeg < end) return i;
+        if (angleDeg >= start && angleDeg < end) {
+            if (!m_items[i].visible || !m_items[i].enabled) return -1;
+            return i;
+        }
     }
     return -1;
 }
 
+bool RadialMenu::usesPartialLayout() const {
+    for (const auto &item : m_items) {
+        if (!item.visible) return true;
+    }
+    return false;
+}
+
 void RadialMenu::drawSector(QPainter &p, int index) const {
+    if (!m_items[index].visible) return;
+
     const int    n      = m_items.size();
     const double step   = 360.0 / n;
     const double sweep  = step - GapDeg;
@@ -96,6 +108,14 @@ void RadialMenu::drawSector(QPainter &p, int index) const {
         p.setPen(Qt::NoPen);
     }
     p.drawPath(path);
+
+    if (usesPartialLayout()) {
+        QColor border(Theme::Border);
+        border.setAlpha(210);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(border, 1.0));
+        p.drawPath(path);
+    }
 
     const double midAngleRad = startRad + (sweep / 2.0) * DEG2RAD;
     const double midR        = (InnerR + OuterR) / 2.0;
@@ -135,7 +155,7 @@ void RadialMenu::paintEvent(QPaintEvent *) {
     const double cx = WidgetSize / 2.0;
     const double cy = WidgetSize / 2.0;
 
-    if (!m_items.isEmpty()) {
+    if (!m_items.isEmpty() && !usesPartialLayout()) {
         const double step = 360.0 / m_items.size();
         QColor separator(0, 0, 0, 125);
         QPen separatorPen(separator, 1.2);
@@ -149,12 +169,14 @@ void RadialMenu::paintEvent(QPaintEvent *) {
         }
     }
 
-    QColor outerBorder(Theme::Border);
-    outerBorder.setAlpha(210);
-    p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(outerBorder, 1.0));
-    p.drawEllipse(QPointF(cx, cy), InnerR, InnerR);
-    p.drawEllipse(QPointF(cx, cy), OuterR, OuterR);
+    if (!usesPartialLayout()) {
+        QColor outerBorder(Theme::Border);
+        outerBorder.setAlpha(210);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(outerBorder, 1.0));
+        p.drawEllipse(QPointF(cx, cy), InnerR, InnerR);
+        p.drawEllipse(QPointF(cx, cy), OuterR, OuterR);
+    }
 }
 
 void RadialMenu::mouseMoveEvent(QMouseEvent *event) {

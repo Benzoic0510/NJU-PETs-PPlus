@@ -15,6 +15,8 @@ public:
     struct Item {
         QString label;
         QString icon;   // Text symbol drawn above the label.
+        bool visible = true;
+        bool enabled = true;
     };
 
     explicit RadialMenu(QWidget *parent = nullptr);
@@ -33,6 +35,7 @@ protected:
 private:
     int     itemAt(QPoint localPos) const;
     void    drawSector(QPainter &p, int index) const;
+    bool    usesPartialLayout() const;
     double  sectorStartAngle(int index) const;  // 返回弧度
 
     QVector<Item> m_items;
