@@ -283,7 +283,6 @@ QPushButton *SettingsPanel::makeResetButton() {
     button->setFixedSize(26, 26);
     button->setCursor(Qt::PointingHandCursor);
     button->setFocusPolicy(Qt::NoFocus);
-    button->setToolTip("重置为默认值");
     button->setStyleSheet(
         "QPushButton {"
         "  background: transparent;"
@@ -384,6 +383,7 @@ QWidget *SettingsPanel::makePetPage() {
 
     m_interactionDisabledCheck = new QCheckBox("允许与宠物交互");
     m_interactionDisabledCheck->setChecked(!AppConfig::instance().petInteractionDisabled());
+    m_interactionDisabledCheck->setCursor(Qt::PointingHandCursor);
     m_interactionDisabledCheck->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextSecondary) + ";");
     connect(m_interactionDisabledCheck, &QCheckBox::toggled, this, [this](bool checked) {
         AppConfig::instance().setPetInteractionDisabled(!checked);
@@ -472,6 +472,7 @@ QWidget *SettingsPanel::makeSchedulePage() {
 
     m_reminderCheck = new QCheckBox("启用日程提醒");
     m_reminderCheck->setChecked(AppConfig::instance().reminderEnabled());
+    m_reminderCheck->setCursor(Qt::PointingHandCursor);
     m_reminderCheck->setStyleSheet("font-size: 14px; color: " + QString(Theme::TextSecondary) + ";");
     connect(m_reminderCheck, &QCheckBox::toggled, this, [this](bool checked) {
         AppConfig::instance().setReminderEnabled(checked);

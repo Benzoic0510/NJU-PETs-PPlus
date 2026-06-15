@@ -206,6 +206,7 @@ void ScheduleEditPanel::setupUi() {
     m_nlpEdit = new QLineEdit;
     m_nlpEdit->setPlaceholderText("用自然语言描述日程…");
     m_nlpEdit->setFixedHeight(30);
+    m_nlpEdit->setContextMenuPolicy(Qt::NoContextMenu);
     m_nlpEdit->setStyleSheet(
         "QLineEdit { border: 1px solid " + QString(Theme::Border) + ";"
         "  border-radius: 6px; padding: 0 8px; font-size: 13px; background: " + QString(Theme::BgPrimary) + "; }"
@@ -400,6 +401,7 @@ void ScheduleEditPanel::setupUi() {
 
     m_titleEdit = new QLineEdit;
     m_titleEdit->setPlaceholderText("必填");
+    m_titleEdit->setContextMenuPolicy(Qt::NoContextMenu);
     m_titleEdit->setStyleSheet(editSS);
     form->addRow(makeLabel("标题"), m_titleEdit);
 
@@ -407,6 +409,7 @@ void ScheduleEditPanel::setupUi() {
     m_startEdit->setDisplayFormat("yyyy-MM-dd  HH:mm");
     m_startEdit->setCalendarPopup(true);
     m_startEdit->setCalendarWidget(makeCalendar());
+    m_startEdit->setContextMenuPolicy(Qt::NoContextMenu);
     m_startEdit->setStyleSheet(dtSS);
     form->addRow(makeLabel("开始"), m_startEdit);
 
@@ -414,11 +417,13 @@ void ScheduleEditPanel::setupUi() {
     m_endEdit->setDisplayFormat("yyyy-MM-dd  HH:mm");
     m_endEdit->setCalendarPopup(true);
     m_endEdit->setCalendarWidget(makeCalendar());
+    m_endEdit->setContextMenuPolicy(Qt::NoContextMenu);
     m_endEdit->setStyleSheet(dtSS);
     form->addRow(makeLabel("结束"), m_endEdit);
 
     m_locEdit = new QLineEdit;
     m_locEdit->setPlaceholderText("可选");
+    m_locEdit->setContextMenuPolicy(Qt::NoContextMenu);
     m_locEdit->setStyleSheet(editSS);
     form->addRow(makeLabel("地点"), m_locEdit);
 
