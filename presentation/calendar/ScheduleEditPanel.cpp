@@ -425,7 +425,13 @@ void ScheduleEditPanel::setupUi() {
     m_remindBox = new QComboBox;
     m_remindBox->setStyleSheet(
         "QComboBox { border: 1px solid " + QString(Theme::Border) + ";"
-        "  border-radius: 5px; padding: 2px 6px; font-size: 13px; }");
+        "  border-radius: 5px; padding: 2px 6px; font-size: 13px;"
+        "  color: " + QString(Theme::TextPrimary) + ";"
+        "  background: " + QString(Theme::BgPrimary) + "; }"
+        "QComboBox QAbstractItemView {"
+        "  color: " + QString(Theme::TextPrimary) + ";"
+        "  background: " + QString(Theme::BgPrimary) + ";"
+        "  selection-background-color: " + QString(Theme::PrimaryBg) + "; }");
     form->addRow(makeLabel("提醒"), m_remindBox);
     onDDLToggled(false);  // 初始化为普通日程选项
 

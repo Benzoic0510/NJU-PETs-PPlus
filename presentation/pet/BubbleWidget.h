@@ -24,6 +24,7 @@ public:
     bool isInChat() const { return m_inChat; }
     void showInput();
     void showResponse(const Schedule &s);
+    void showReminder(const Schedule &s);
     void showUpcoming(const QVector<Schedule> &schedules);
     void showError(const QString &msg);
     void showClarification(const QString &msg);

@@ -121,6 +121,28 @@ void BubbleWidget::showResponse(const Schedule &s) {
     updateLayout();
 }
 
+void BubbleWidget::showReminder(const Schedule &s) {
+    m_timer.stop();
+    m_inChat = false;
+    m_loading->hide();
+    m_edit->hide();
+    m_output->setTextFormat(Qt::PlainText);
+    m_output->setText(
+        s.isDDL
+            ? QString("DDL 提醒\n%1\n截止 %2")
+                  .arg(s.title)
+                  .arg(s.startTime.toString("MM月dd日 HH:mm"))
+            : QString("日程提醒\n%1\n%2 – %3")
+                  .arg(s.title)
+                  .arg(s.startTime.toString("MM月dd日 HH:mm"))
+                  .arg(s.endTime.toString("HH:mm")));
+    m_output->show();
+    m_hasOutput = true;
+    updateLayout();
+    show();
+    m_timer.start(8000);
+}
+
 void BubbleWidget::showUpcoming(const QVector<Schedule> &schedules) {
     m_inChat = false;
     m_hasOutput = true;

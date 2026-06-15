@@ -44,11 +44,14 @@ Application::~Application() {
 
 void Application::start() {
     AppConfig::instance().load();
-    // 互动 / 点击默认音效：用户未自定义时使用内置资源
+    // 互动 / 提醒 / 点击默认音效：用户未自定义时使用内置资源
     {
         auto mapping = AppConfig::instance().soundMapping();
         if (!mapping.contains("greet") || mapping.value("greet").isEmpty()) {
             mapping.insert("greet", ":/sounds/Muelsyse_greet.wav");
+        }
+        if (!mapping.contains("remind") || mapping.value("remind").isEmpty()) {
+            mapping.insert("remind", ":/sounds/remind.mp3");
         }
         m_soundEffectService.setMapping(mapping);
     }
@@ -96,6 +99,7 @@ void Application::start() {
     connect(m_petWidget, &PetWidget::interacted,  this, [this]() { m_soundEffectService.play("greet"); });
     connect(m_petWidget, &PetWidget::dragStarted, this, [this]() { m_soundEffectService.play("drag_start"); });
     connect(m_petWidget, &PetWidget::dragEnded,   this, [this]() { m_soundEffectService.play("drag_end"); });
+    connect(&m_reminderService, &ReminderService::remind, this, [this]() { m_soundEffectService.play("remind"); });
 
     // BubbleWidget
     m_bubbleWidget = new BubbleWidget;
@@ -114,6 +118,8 @@ void Application::start() {
     connect(m_petWidget, &PetWidget::upcomingScheduleRequested, this, [this]() {
         m_bubbleWidget->showUpcoming(m_scheduleService.getUpcoming());
     });
+    connect(&m_reminderService, &ReminderService::remind,
+            m_bubbleWidget, &BubbleWidget::showReminder);
     // 环形菜单：面板 / 退出
     connect(m_petWidget, &PetWidget::showMainMenuRequested, this, [this]() {
         m_mainMenu->show();
@@ -171,22 +177,9 @@ void Application::connectSignals() {
     connect(&m_scheduleService, &ScheduleService::scheduleRemoved,
             &m_reminderService, &ReminderService::forgetSchedule);
 
-    // 提醒触发 → 宠物进入 interact 状态 + 系统通知
+    // 提醒触发 → 宠物进入 greet 状态
     connect(&m_reminderService, &ReminderService::remind,
             &m_petStateManager,  &PetStateManager::onRemind);
-    connect(&m_reminderService, &ReminderService::remind, this, [this](const Schedule &s) {
-        if (!m_trayIcon)
-            return;
-
-        const QString title = s.isDDL ? "DDL 提醒" : "日程提醒";
-        QString message = s.isDDL
-            ? QString("%1\n截止：%2").arg(s.title, s.startTime.toString("MM月dd日 HH:mm"))
-            : QString("%1\n时间：%2").arg(s.title, s.startTime.toString("MM月dd日 HH:mm"));
-        if (!s.location.isEmpty())
-            message += "\n地点：" + s.location;
-
-        m_trayIcon->showMessage(title, message, QSystemTrayIcon::Information, 8000);
-    });
 
     // NLP 解析完成 → 尝试添加日程，成功显示 showResponse，冲突显示 showError
     connect(&m_nlpService, &NLPService::parsed,

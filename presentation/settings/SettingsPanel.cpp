@@ -614,6 +614,7 @@ QWidget *SettingsPanel::makeSoundPage() {
     };
     const QVector<SoundEvent> events = {
         {"greet",      QString::fromUtf8("互动 / 点击")},
+        {"remind",     QString::fromUtf8("日程提醒")},
         {"idle",       QString::fromUtf8("待机")},
         {"sleep",      QString::fromUtf8("入睡")},
         {"wake",       QString::fromUtf8("醒来")},
