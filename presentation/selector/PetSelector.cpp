@@ -162,10 +162,11 @@ void PetSelector::markSelected(const QString &petId) {
             btn->setEnabled(false);
         } else {
             btn->setText("选择");
+            btn->setCursor(Qt::PointingHandCursor);
             btn->setStyleSheet(
                 "#petSelectButton { background: " + QString(Theme::PrimaryBg) + "; color: " + Theme::PrimaryDark + ";"
                 "  border: none; border-radius: 6px; font-size: 13px; }"
-                "#petSelectButton:hover { background: " + QString(Theme::BorderSecondary) + "; }");
+                "#petSelectButton:hover { background: " + QString(Theme::PrimaryMid) + "; color: " + Theme::BgPrimary + "; }");
             btn->setEnabled(true);
         }
     }
