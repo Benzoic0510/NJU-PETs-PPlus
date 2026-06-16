@@ -29,6 +29,7 @@ class MainMenu : public QWidget {
 
 public:
     explicit MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent = nullptr);
+    void showAndActivate();
     void showSchedulePage();
 
 signals:

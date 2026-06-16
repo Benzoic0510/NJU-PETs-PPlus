@@ -127,9 +127,7 @@ void Application::start() {
             m_bubbleWidget, &BubbleWidget::showReminder);
     // 环形菜单：面板 / 退出
     connect(m_petWidget, &PetWidget::showMainMenuRequested, this, [this]() {
-        m_mainMenu->show();
-        m_mainMenu->raise();
-        m_mainMenu->activateWindow();
+        m_mainMenu->showAndActivate();
     });
     connect(m_petWidget, &PetWidget::quitRequested, qApp, &QApplication::quit);
 
@@ -147,9 +145,7 @@ void Application::setupTrayIcon() {
     m_trayIcon->setContextMenu(m_trayMenu);
 
     connect(showAct, &QAction::triggered, this, [this]() {
-        m_mainMenu->show();
-        m_mainMenu->raise();
-        m_mainMenu->activateWindow();
+        m_mainMenu->showAndActivate();
     });
     connect(quitAct, &QAction::triggered, qApp, &QApplication::quit);
     connect(m_trayIcon, &QSystemTrayIcon::activated, this,
@@ -157,9 +153,7 @@ void Application::setupTrayIcon() {
                 if (reason == QSystemTrayIcon::DoubleClick ||
                     reason == QSystemTrayIcon::Trigger)
                 {
-                    m_mainMenu->show();
-                    m_mainMenu->raise();
-                    m_mainMenu->activateWindow();
+                    m_mainMenu->showAndActivate();
                 }
             });
 

@@ -698,10 +698,22 @@ MainMenu::MainMenu(ScheduleService *svc, NLPService *nlp, QWidget *parent)
     setupUi(svc, nlp);
 }
 
-void MainMenu::showSchedulePage() {
+void MainMenu::showAndActivate() {
+    if (windowState().testFlag(Qt::WindowMinimized))
+        setWindowState((windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+
     show();
     raise();
     activateWindow();
+
+    QTimer::singleShot(0, this, [this]() {
+        raise();
+        activateWindow();
+    });
+}
+
+void MainMenu::showSchedulePage() {
+    showAndActivate();
     switchPage(1);
 }
 
